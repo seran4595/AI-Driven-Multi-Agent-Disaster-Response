@@ -1,0 +1,13 @@
+# Virtual Environment
+.venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Environment Variables
+.env
+disaster_response.db

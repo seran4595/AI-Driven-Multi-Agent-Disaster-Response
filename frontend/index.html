@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Disaster AI Command Center
+    </title>
+
+
+    <!-- MAIN CSS -->
+
+    <link
+        rel="stylesheet"
+        href="/static/css/style.css?v=3.1"
+    >
+
+
+    <!-- LEAFLET CSS -->
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================================
+     SIDEBAR
+===================================================== -->
+
+<aside class="sidebar">
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            🚨
+        </div>
+
+        <div>
+
+            <h1>
+                DISASTER AI
+            </h1>
+
+            <span>
+                COMMAND CENTER
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <nav class="navigation">
+
+        <button
+            class="nav-item active"
+            data-section="dashboard"
+        >
+            <span>📊</span>
+            Dashboard
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-section="analytics"
+        >
+            <span>📈</span>
+            Analytics
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-section="map-section"
+        >
+            <span>🗺️</span>
+            Live Map
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-section="reports"
+        >
+            <span>📋</span>
+            Reports
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-section="response-plans"
+        >
+            <span>🚨</span>
+            Response Plans
+        </button>
+
+    </nav>
+
+
+    <button
+        class="sidebar-report-btn"
+        id="openReportBtn"
+    >
+        <span>＋</span>
+        Report Disaster
+    </button>
+
+
+    <div class="system-status">
+
+        <div class="status-dot"></div>
+
+        <div>
+
+            <strong>
+                System Online
+            </strong>
+
+            <small>
+                AI agents operational
+            </small>
+
+        </div>
+
+    </div>
+
+</aside>
+
+
+<!-- =====================================================
+     MAIN CONTENT
+===================================================== -->
+
+<main class="main-content">
+
+
+    <!-- =================================================
+         HEADER
+    ================================================== -->
+
+    <header class="topbar">
+
+        <div>
+
+            <p class="eyebrow">
+                AI-POWERED EMERGENCY MANAGEMENT
+            </p>
+
+            <h2>
+                Disaster Response
+                <span>Command Center</span>
+            </h2>
+
+            <p class="subtitle">
+                Real-time intelligence,
+                AI analysis and coordinated
+                emergency response.
+            </p>
+
+        </div>
+
+
+        <div class="header-actions">
+
+            <div class="connection-status">
+
+                <span></span>
+
+                LIVE
+
+            </div>
+
+
+            <div
+                class="last-updated"
+                id="lastUpdated"
+            >
+                Last updated: —
+            </div>
+
+
+            <button
+                class="refresh-btn"
+                id="refreshBtn"
+            >
+                ↻ Refresh
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <!-- =================================================
+         STATISTICS
+    ================================================== -->
+
+    <section
+        class="stats-grid"
+        id="dashboard"
+    >
+
+
+        <!-- TOTAL DISASTERS -->
+
+        <div class="stat-card">
+
+            <div class="stat-icon blue">
+                🌍
+            </div>
+
+            <div>
+
+                <span class="stat-label">
+                    TOTAL DISASTERS
+                </span>
+
+                <strong
+                    id="totalDisasters"
+                    class="stat-number"
+                >
+                    —
+                </strong>
+
+                <small class="stat-foot">
+                    Recorded incidents
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <!-- AFFECTED PEOPLE -->
+
+        <div class="stat-card">
+
+            <div class="stat-icon orange">
+                👥
+            </div>
+
+            <div>
+
+                <span class="stat-label">
+                    AFFECTED PEOPLE
+                </span>
+
+                <strong
+                    id="affectedPeople"
+                    class="stat-number"
+                >
+                    —
+                </strong>
+
+                <small class="stat-foot">
+                    Estimated population
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <!-- HIGH PRIORITY -->
+
+        <div class="stat-card danger-card">
+
+            <div class="stat-icon red">
+                🚨
+            </div>
+
+            <div>
+
+                <span class="stat-label">
+                    HIGH PRIORITY
+                </span>
+
+                <strong
+                    id="highPriority"
+                    class="stat-number"
+                >
+                    —
+                </strong>
+
+                <small class="stat-foot">
+                    High + Critical
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <!-- ACTIVE LOCATIONS -->
+
+        <div class="stat-card">
+
+            <div class="stat-icon green">
+                📍
+            </div>
+
+            <div>
+
+                <span class="stat-label">
+                    ACTIVE LOCATIONS
+                </span>
+
+                <strong
+                    id="activeLocations"
+                    class="stat-number"
+                >
+                    —
+                </strong>
+
+                <small class="stat-foot">
+                    Response locations
+                </small>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =================================================
+         MAP + ANALYSIS
+    ================================================== -->
+
+    <section
+        class="dashboard-grid"
+        id="map-section"
+    >
+
+
+        <!-- =================================================
+             LIVE DISASTER MAP
+        ================================================== -->
+
+        <div class="panel map-panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <span class="panel-kicker">
+                        LIVE INTELLIGENCE
+                    </span>
+
+                    <h3>
+                        Disaster Locations
+                    </h3>
+
+                </div>
+
+
+                <div class="map-controls">
+
+                    <button
+                        id="locateAllBtn"
+                        title="Show all disasters"
+                    >
+                        ◎
+                    </button>
+
+                    <span class="live-badge">
+                        ● LIVE
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div id="map"></div>
+
+
+            <div class="map-footer">
+
+                <span>
+                    ● Disaster locations
+                </span>
+
+                <span>
+                    Click a marker for details
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             DISASTER TYPES
+        ================================================== -->
+
+        <div class="panel types-panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <span class="panel-kicker">
+                        INCIDENT ANALYSIS
+                    </span>
+
+                    <h3>
+                        Disaster Types
+                    </h3>
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="disasterTypes"
+                class="type-list"
+            >
+
+                <div class="loading">
+                    Loading...
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =================================================
+         ANALYTICS
+    ================================================== -->
+
+    <section
+        class="panel analytics-panel"
+        id="analytics"
+    >
+
+        <div class="panel-header analytics-header">
+
+            <div>
+                <span class="panel-kicker">
+                    DATA INTELLIGENCE
+                </span>
+
+                <h3>
+                    📊 Disaster Analytics
+                </h3>
+
+                <p class="panel-description">
+                    Live insights generated from all stored disaster reports.
+                </p>
+            </div>
+
+            <div class="analytics-live-badge">
+                <span></span>
+                LIVE DATA
+            </div>
+
+        </div>
+
+        <div
+            id="analyticsOverview"
+            class="analytics-overview-grid"
+        >
+            <div class="analytics-loading">Loading analytics...</div>
+        </div>
+
+        <div class="analytics-grid">
+
+            <div class="analytics-card">
+                <div class="analytics-card-header">
+                    <div>
+                        <span class="analytics-card-icon">🌪️</span>
+                        <div>
+                            <h4>Disaster Distribution</h4>
+                            <small>Incidents by disaster type</small>
+                        </div>
+                    </div>
+                </div>
+                <div id="analyticsDisasterTypes" class="analytics-bars">
+                    <div class="analytics-loading">Loading...</div>
+                </div>
+            </div>
+
+            <div class="analytics-card">
+                <div class="analytics-card-header">
+                    <div>
+                        <span class="analytics-card-icon">⚠️</span>
+                        <div>
+                            <h4>Severity Distribution</h4>
+                            <small>Reported incident severity</small>
+                        </div>
+                    </div>
+                </div>
+                <div id="analyticsSeverity" class="analytics-bars">
+                    <div class="analytics-loading">Loading...</div>
+                </div>
+            </div>
+
+            <div class="analytics-card">
+                <div class="analytics-card-header">
+                    <div>
+                        <span class="analytics-card-icon">📍</span>
+                        <div>
+                            <h4>Top Affected Locations</h4>
+                            <small>Highest affected population</small>
+                        </div>
+                    </div>
+                </div>
+                <div id="analyticsLocations" class="analytics-location-list">
+                    <div class="analytics-loading">Loading...</div>
+                </div>
+            </div>
+
+            <div class="analytics-card recent-analytics-card">
+                <div class="analytics-card-header">
+                    <div>
+                        <span class="analytics-card-icon">🕒</span>
+                        <div>
+                            <h4>Recent Incidents</h4>
+                            <small>Latest reports received</small>
+                        </div>
+                    </div>
+                </div>
+                <div id="analyticsRecent" class="analytics-recent-list">
+                    <div class="analytics-loading">Loading...</div>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =================================================
+         REPORTS
+    ================================================== -->
+
+    <section
+        class="panel reports-panel"
+        id="reports"
+    >
+
+        <div class="panel-header">
+
+            <div>
+
+                <span class="panel-kicker">
+                    DATABASE
+                </span>
+
+                <h3>
+                    Recent Disaster Reports
+                </h3>
+
+            </div>
+
+
+            <div class="report-actions">
+
+                <span
+                    id="reportCount"
+                    class="report-count"
+                >
+                    0 reports
+                </span>
+
+
+                <button
+                    class="small-report-btn"
+                    id="openReportBtn2"
+                >
+                    + New Report
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <div class="table-wrapper">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>TYPE</th>
+
+                        <th>LOCATION</th>
+
+                        <th>SEVERITY</th>
+
+                        <th>AFFECTED</th>
+
+                        <th>REPORTED BY</th>
+
+                        <th>TIME</th>
+
+                        <th>PLAN</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="reportsTable">
+
+                    <tr>
+
+                        <td
+                            colspan="7"
+                            class="loading"
+                        >
+                            Loading disaster reports...
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+    <!-- =================================================
+         RESPONSE PLANS
+    ================================================== -->
+
+    <section
+        class="panel response-plans-panel"
+        id="response-plans"
+    >
+
+        <div class="panel-header">
+
+            <div>
+                <span class="panel-kicker">
+                    AI COORDINATION
+                </span>
+
+                <h3>
+                    Disaster Response Plans
+                </h3>
+
+                <p class="panel-description">
+                    Saved AI-generated resource allocation plans for every reported disaster.
+                </p>
+            </div>
+
+            <span
+                id="responsePlanCount"
+                class="report-count"
+            >
+                0 plans
+            </span>
+
+        </div>
+
+        <div
+            id="responsePlansList"
+            class="response-plans-list"
+        >
+            <div class="response-empty-state">
+                Loading response plans...
+            </div>
+        </div>
+
+    </section>
+
+
+    <!-- =================================================
+         FOOTER
+    ================================================== -->
+
+    <footer>
+
+        <span>
+            AI-Driven Multi-Agent Disaster Response
+        </span>
+
+        <span>
+            FastAPI • PostgreSQL • Multi-Agent AI
+        </span>
+
+    </footer>
+
+</main>
+
+
+<!-- =====================================================
+     REPORT DISASTER MODAL
+===================================================== -->
+
+<div
+    class="modal-overlay"
+    id="reportModal"
+>
+
+    <div class="report-modal">
+
+
+        <!-- =================================================
+             MODAL HEADER
+        ================================================== -->
+
+        <div class="modal-header">
+
+            <div>
+
+                <span class="panel-kicker">
+                    EMERGENCY REPORTING
+                </span>
+
+                <h3>
+                    Report a Disaster
+                </h3>
+
+                <p>
+                    Submit an incident for AI analysis
+                    and coordinated response.
+                </p>
+
+            </div>
+
+
+            <button
+                class="close-btn"
+                id="closeReportBtn"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <!-- =================================================
+             REPORT FORM
+        ================================================== -->
+
+        <form id="disasterForm">
+
+
+            <!-- =================================================
+                 BASIC DISASTER INFORMATION
+            ================================================== -->
+
+            <div class="form-grid">
+
+
+                <!-- DISASTER TYPE -->
+
+                <div class="form-group">
+
+                    <label>
+                        Disaster Type
+                    </label>
+
+                    <select
+                        id="disaster_type"
+                        required
+                    >
+
+                        <option value="">
+                            Select disaster type
+                        </option>
+
+                        <option>Flood</option>
+                        <option>Flash Flood</option>
+                        <option>River Flood</option>
+                        <option>Coastal Flood</option>
+                        <option>Tsunami</option>
+                        <option>Cyclone</option>
+                        <option>Hurricane</option>
+                        <option>Typhoon</option>
+                        <option>Tornado</option>
+                        <option>Earthquake</option>
+                        <option>Aftershock</option>
+                        <option>Landslide</option>
+                        <option>Mudslide</option>
+                        <option>Volcanic Eruption</option>
+                        <option>Wildfire</option>
+                        <option>Forest Fire</option>
+                        <option>Urban Fire</option>
+                        <option>Industrial Fire</option>
+                        <option>Chemical Leak</option>
+                        <option>Gas Leak</option>
+                        <option>Oil Spill</option>
+                        <option>Radiation Leak</option>
+                        <option>Building Collapse</option>
+                        <option>Bridge Collapse</option>
+                        <option>Dam Failure</option>
+                        <option>Train Accident</option>
+                        <option>Plane Crash</option>
+                        <option>Ship Accident</option>
+                        <option>Road Accident</option>
+                        <option>Heatwave</option>
+                        <option>Cold Wave</option>
+                        <option>Drought</option>
+                        <option>Blizzard</option>
+                        <option>Snowstorm</option>
+                        <option>Thunderstorm</option>
+                        <option>Lightning</option>
+                        <option>Dust Storm</option>
+                        <option>Sandstorm</option>
+                        <option>Pandemic</option>
+                        <option>Epidemic</option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- SEVERITY -->
+
+                <div class="form-group">
+
+                    <label>
+                        Severity
+                    </label>
+
+                    <select
+                        id="severity"
+                        required
+                    >
+
+                        <option value="">
+                            Select severity
+                        </option>
+
+                        <option>Low</option>
+                        <option>Medium</option>
+                        <option>High</option>
+                        <option>Critical</option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 SMART LOCATION
+            ================================================== -->
+
+            <div class="location-section">
+
+
+                <!-- LOCATION HEADER -->
+
+                <div class="location-header">
+
+                    <div>
+
+                        <span class="panel-kicker">
+                            SMART LOCATION
+                        </span>
+
+                        <h4>
+                            📍 Where is the disaster?
+                        </h4>
+
+                        <p>
+                            Search for a city, area or landmark.
+                            Coordinates will be detected automatically.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- LOCATION SEARCH -->
+
+                <div class="form-group">
+
+                    <label>
+                        Search Location
+                    </label>
+
+
+                    <div class="location-search">
+
+                        <input
+                            id="locationSearch"
+                            type="text"
+                            placeholder="🔎 Search city, area or landmark..."
+                            autocomplete="off"
+                        >
+
+
+                        <button
+                            type="button"
+                            id="searchLocationBtn"
+                            class="location-search-btn"
+                        >
+                            Search
+                        </button>
+
+                    </div>
+
+
+                    <!-- SEARCH RESULTS -->
+
+                    <div
+                        id="locationSuggestions"
+                        class="location-suggestions"
+                    ></div>
+
+                </div>
+
+
+                <!-- LOCATION ACTION BUTTONS -->
+
+                <div class="location-actions">
+
+
+                    <button
+                        type="button"
+                        id="useCurrentLocationBtn"
+                        class="location-action-btn"
+                    >
+                        📍 Use My Current Location
+                    </button>
+
+
+                    <span class="location-or">
+                        OR
+                    </span>
+
+
+                    <span class="location-hint">
+                        Click directly on the map
+                    </span>
+
+                </div>
+
+
+                <!-- LOCATION PICKER MAP -->
+
+                <div class="location-picker">
+
+                    <div
+                        id="locationPickerMap"
+                        class="location-picker-map"
+                    ></div>
+
+
+                    <div class="map-picker-overlay">
+
+                        <span>
+                            🖱️ Click the map to select a location
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SELECTED LOCATION -->
+
+                <div
+                    id="selectedLocation"
+                    class="selected-location"
+                >
+
+                    <div class="selected-location-icon">
+                        📍
+                    </div>
+
+
+                    <div class="selected-location-info">
+
+                        <strong id="selectedPlace">
+                            No location selected
+                        </strong>
+
+
+                        <span id="selectedAddress">
+                            Search or select a location on the map
+                        </span>
+
+                    </div>
+
+
+                    <div class="location-check">
+                        ✓
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     AUTO-FILLED VALUES
+
+                     These fields remain hidden because
+                     the backend still needs them.
+                ================================================== -->
+
+                <input
+                    id="country"
+                    type="hidden"
+                    value="India"
+                >
+
+
+                <input
+                    id="state"
+                    type="hidden"
+                >
+
+
+                <input
+                    id="city"
+                    type="hidden"
+                >
+
+
+                <input
+                    id="latitude"
+                    type="hidden"
+                >
+
+
+                <input
+                    id="longitude"
+                    type="hidden"
+                >
+
+            </div>
+
+
+            <!-- =================================================
+                 AFFECTED PEOPLE
+            ================================================== -->
+
+            <div class="form-group">
+
+                <label>
+                    Affected People
+                </label>
+
+                <input
+                    id="affected_people"
+                    type="number"
+                    min="0"
+                    value="0"
+                    required
+                >
+
+            </div>
+
+
+            <!-- =================================================
+                 REPORTED BY
+            ================================================== -->
+
+            <div class="form-group">
+
+                <label>
+                    Reported By
+                </label>
+
+                <input
+                    id="reported_by"
+                    placeholder="Emergency Control Room"
+                    required
+                >
+
+            </div>
+
+
+            <!-- =================================================
+                 DESCRIPTION
+            ================================================== -->
+
+            <div class="form-group">
+
+                <label>
+                    Description
+                </label>
+
+                <textarea
+                    id="description"
+                    rows="4"
+                    placeholder="Describe the disaster situation..."
+                    required
+                ></textarea>
+
+            </div>
+
+
+            <!-- =================================================
+                 REPORT TIME
+            ================================================== -->
+
+            <div class="form-group">
+
+                <label>
+                    Report Time
+                </label>
+
+                <input
+                    id="report_time"
+                    type="datetime-local"
+                    readonly
+                    aria-readonly="true"
+                >
+
+                <small class="auto-time-note">
+                    🕒 Automatically recorded when the report is submitted.
+                </small>
+
+            </div>
+
+
+            <!-- =================================================
+                 FORM MESSAGE
+            ================================================== -->
+
+            <div
+                class="form-message"
+                id="formMessage"
+            ></div>
+
+
+            <!-- =================================================
+                 FORM ACTIONS
+            ================================================== -->
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="cancel-btn"
+                    id="cancelReportBtn"
+                >
+                    Cancel
+                </button>
+
+
+                <button
+                    type="submit"
+                    class="submit-report-btn"
+                    id="submitReportBtn"
+                >
+                    🚨 Submit Report
+                </button>
+
+            </div>
+
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     AI RESULT MODAL
+===================================================== -->
+
+<div
+    class="modal-overlay"
+    id="resultModal"
+>
+
+    <div class="result-modal">
+
+
+        <div class="result-icon">
+            ✓
+        </div>
+
+
+        <h3>
+            Disaster Report Processed
+        </h3>
+
+
+        <p>
+            The Coordinator Agent successfully
+            processed the incident.
+        </p>
+
+
+        <div
+            class="ai-result-grid"
+            id="aiResultContent"
+        >
+        </div>
+
+
+        <button
+            class="submit-report-btn"
+            id="closeResultBtn"
+        >
+            Continue to Dashboard
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     LEAFLET JS
+===================================================== -->
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+
+
+<!-- =====================================================
+     APPLICATION JS
+===================================================== -->
+
+<script
+    src="/static/js/app.js?v=3.0"
+></script>
+
+
+</body>
+
+</html>
