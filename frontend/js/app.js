@@ -664,10 +664,20 @@ function useCurrentLocation() {
 
             const accuracy = Number(best.accuracy || 0);
 
+            // Desktop browsers can fall back to Wi-Fi/IP positioning.
+            // If the result is extremely broad, don't present it as an
+            // exact current location. Let the user choose on the map.
+            if (accuracy > 2000) {
+                showLocationMessage(
+                    `⚠️ Browser location is too broad (~${Math.round(accuracy)} m). Please click the map at your location or search your city.`
+                );
+                return;
+            }
+
             showLocationMessage(
-                accuracy > 1000
-                    ? `⚠️ Location detected, but accuracy is about ${Math.round(accuracy)} m. For better accuracy, use Search Location or click the map.`
-                    : `📍 Location detected (accuracy about ${Math.round(accuracy)} m).`
+                accuracy > 500
+                    ? `⚠️ Location detected (~${Math.round(accuracy)} m). Please verify the pin.`
+                    : `📍 Current location detected (~${Math.round(accuracy)} m).`
             );
 
             await setSelectedLocation(
@@ -774,7 +784,7 @@ async function detectBestCurrentLocation() {
         );
 
         // Give the browser a few seconds to improve the reading.
-        setTimeout(finish, 8000);
+        setTimeout(finish, 12000);
 
     });
 
@@ -1009,67 +1019,43 @@ function extractLocationData(
     displayName = ""
 ) {
 
-    /*
-        Nominatim can return different fields
-        depending on whether the user selects:
-
-        Chennai
-        Chennai Railway Station
-        Vellore
-        VIT
-        a street
-        a village
-        a landmark
-    */
-
-
-    const country =
-        address.country ||
-        "India";
-
+    // Prefer an actual city/town/municipality. Do NOT use
+    // suburb or city_district as the city because places such
+    // as Vadapalani are neighbourhoods inside Chennai.
+    const country = address.country || "India";
 
     const state =
         address.state ||
         address.region ||
-        address.state_district ||
         "";
-
 
     const city =
         address.city ||
         address.town ||
         address.municipality ||
         address.village ||
-        address.city_district ||
-        address.suburb ||
-        address.county ||
         "";
 
+    const neighbourhood =
+        address.suburb ||
+        address.neighbourhood ||
+        address.city_district ||
+        address.quarter ||
+        "";
 
     const place =
         city ||
-        address.town ||
-        address.village ||
-        address.suburb ||
-        address.neighbourhood ||
+        neighbourhood ||
         displayName ||
         "Selected Location";
 
-
     return {
-
         country,
-
         state,
-
-        city: place,
-
+        city: city || place,
         place
-
     };
-
 }
-
 
 // =====================================================
 // UPDATE HIDDEN FORM FIELDS

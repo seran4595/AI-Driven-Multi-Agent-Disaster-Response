@@ -2808,3 +2808,82 @@ footer {
 @media (max-width: 900px) { .notification-meta { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width: 600px) { .notification-meta { grid-template-columns:1fr; } }
 
+
+
+/* =========================================================
+   RESPONSE PLAN PRO UI v4
+   Compact wide command-center layout
+========================================================= */
+#resultModal { padding: 24px !important; }
+#resultModal .result-modal {
+    width: min(1180px, 96vw) !important;
+    max-width: 1180px !important;
+    max-height: min(900px, calc(100vh - 48px)) !important;
+    padding: 24px !important;
+    border-radius: 22px !important;
+    background: linear-gradient(145deg, #0d1622 0%, #0a111a 100%) !important;
+    border: 1px solid #26364b !important;
+    box-shadow: 0 35px 100px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.035) !important;
+    text-align: left !important;
+}
+#resultModal .result-icon { width: 48px !important; height: 48px !important; margin: 0 0 10px !important; font-size: 22px !important; }
+#resultModal .result-modal > h3 { font-size: 22px !important; margin: 0 !important; }
+#resultModal .result-modal > p { margin: 5px 0 14px !important; font-size: 10px !important; }
+#aiResultContent {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 4px 12px 0 !important;
+}
+#aiResultContent.ai-result-grid { display: block !important; grid-template-columns: none !important; }
+#aiResultContent .ai-response-summary { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 10px !important; margin-bottom: 12px !important; }
+#aiResultContent .ai-summary-card { padding: 12px 14px !important; min-height: 72px; display:flex; flex-direction:column; justify-content:center; }
+#aiResultContent .ai-summary-card strong { font-size: 14px !important; }
+#aiResultContent .prediction-response-card { margin-bottom: 12px !important; padding: 15px !important; }
+#aiResultContent .prediction-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px !important; }
+#aiResultContent .prediction-item { padding: 10px !important; }
+#aiResultContent .prediction-item strong { font-size: 10px !important; }
+#aiResultContent .response-plan-title { margin: 14px 0 9px !important; }
+#aiResultContent .response-plan-title > span { font-size: 21px !important; }
+#aiResultContent .resource-response-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+}
+#aiResultContent .resource-response-card {
+    padding: 13px !important;
+    border-radius: 13px !important;
+    min-width: 0 !important;
+    background: linear-gradient(180deg,#0e1722,#0b131d) !important;
+}
+#aiResultContent .resource-response-header { gap: 9px !important; margin-bottom: 10px !important; padding-bottom: 9px !important; }
+#aiResultContent .resource-response-icon { width: 34px !important; height: 34px !important; flex-basis:34px !important; font-size: 17px !important; }
+#aiResultContent .resource-response-header h4 { font-size: 11px !important; }
+#aiResultContent .resource-response-header span { font-size: 7px !important; }
+#aiResultContent .resource-items { grid-template-columns: 1fr !important; gap: 6px !important; }
+#aiResultContent .resource-item { padding: 8px 9px !important; min-height: 36px !important; }
+#aiResultContent .resource-label { font-size: 8px !important; }
+#aiResultContent .resource-value { font-size: 9px !important; }
+#aiResultContent .notification-response-card { margin-top: 12px !important; padding: 14px !important; }
+#resultModal .result-modal > #closeResultBtn { align-self: flex-end; margin-top: 4px; min-width: 190px; }
+
+/* Persistent response-plan cards: use the horizontal space. */
+.response-plans-list { grid-template-columns: repeat(3, minmax(0,1fr)) !important; gap: 12px !important; }
+.response-plan-card { padding: 14px !important; }
+
+@media (max-width: 1000px) {
+    #aiResultContent .resource-response-grid { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+    #aiResultContent .ai-response-summary { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+}
+@media (max-width: 700px) {
+    #resultModal { padding: 10px !important; }
+    #resultModal .result-modal { width: 96vw !important; max-height: calc(100vh - 20px) !important; padding: 17px !important; }
+    #aiResultContent .resource-response-grid,
+    #aiResultContent .prediction-grid,
+    #aiResultContent .ai-response-summary { grid-template-columns: 1fr !important; }
+    .response-plans-list { grid-template-columns: 1fr !important; }
+}
+
+/* =========================================================
+   CURRENT LOCATION ACCURACY / ADDRESS FIX v4
+========================================================= */
+.location-selected { border-color: #2563eb !important; box-shadow: 0 0 0 1px rgba(37,99,235,.12), 0 8px 25px rgba(0,0,0,.16); }
