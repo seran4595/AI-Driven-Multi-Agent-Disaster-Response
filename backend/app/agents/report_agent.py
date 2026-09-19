@@ -13,5 +13,4 @@ class ReportAgent:
 
         if not disaster.severity:
             return False, "Severity is missing."
-
         return True, "Report is valid."
