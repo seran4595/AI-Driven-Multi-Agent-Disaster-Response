@@ -45,7 +45,7 @@ def report_disaster(disaster: DisasterReport):
             ↓
         AI Analysis
             ↓
-        PostgreSQL
+        SQLite
             ↓
         Frontend
     """

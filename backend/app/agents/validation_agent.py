@@ -1,30 +1,9 @@
-# backend/app/agents/validation_agent.py
+from backend.app.models.schema import DISASTER_TYPES
 
-VALID_DISASTERS = [
-    "Earthquake",
-    "Flood",
-    "Tsunami",
-    "Cyclone",
-    "Hurricane",
-    "Typhoon",
-    "Tornado",
-    "Wildfire",
-    "Volcanic Eruption",
-    "Landslide",
-    "Avalanche",
-    "Drought",
-    "Heat Wave",
-    "Cold Wave",
-    "Blizzard",
-    "Hailstorm",
-    "Dust Storm",
-    "Sandstorm",
-    "Lightning Strike"
-]
+
+VALID_DISASTERS = set(DISASTER_TYPES)
 
 
 def validate_disaster(disaster):
-    if disaster.disaster_type not in VALID_DISASTERS:
-        return False
-
-    return True
+    """Validate the disaster type against the API-supported types."""
+    return disaster.disaster_type in VALID_DISASTERS
