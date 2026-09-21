@@ -233,3 +233,6 @@ The core multi-agent disaster-response workflow is implemented. The current focu
 
 **Project:** AI-Driven Multi-Agent Disaster Response  
 **Purpose:** Demonstration of AI agents, API development, database persistence, analytics, and coordinated emergency resource planning.
+
+## Version Control
+This project uses Git (GitHub) for daily development and SVN as a central baseline repository.
