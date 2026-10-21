@@ -88,6 +88,25 @@ def generate_notification(disaster, ai_severity, prediction, resources):
         "Please follow official emergency instructions."
     )
 
+    # Prepare Multi-Agency Department Dispatch
+    disaster_dict = {
+        "id": getattr(disaster, "id", None),
+        "disaster_type": disaster_type,
+        "severity": getattr(disaster, "severity", "medium"),
+        "ai_severity": severity,
+        "city": getattr(disaster, "city", None),
+        "state": getattr(disaster, "state", None),
+        "country": getattr(disaster, "country", None),
+        "latitude": getattr(disaster, "latitude", None),
+        "longitude": getattr(disaster, "longitude", None),
+        "affected_people": affected_people,
+        "prediction": prediction if isinstance(prediction, dict) else {},
+        "resources": resources if isinstance(resources, dict) else {},
+    }
+
+    from backend.app.services.whatsapp_service import prepare_all_notifications
+    multi_agency_notifications = prepare_all_notifications(disaster_dict)
+
     return {
         "status": "READY",
         "channel": "META_WHATSAPP_CLOUD_API",
@@ -106,4 +125,5 @@ def generate_notification(disaster, ai_severity, prediction, resources):
             "affected_people": affected_people,
         },
         "resource_agents": RESOURCE_AGENTS.copy(),
+        "multi_agency": multi_agency_notifications,
     }

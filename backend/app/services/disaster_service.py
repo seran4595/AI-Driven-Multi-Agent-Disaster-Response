@@ -13,10 +13,9 @@ from backend.app.models.disaster_model import Disaster
 # ADD DISASTER
 # ==========================================================
 
-def add_disaster(report, ai_severity=None, prediction=None, resources=None):
+def add_disaster(report, ai_severity=None, prediction=None, resources=None, notification=None):
     """
-    Save a disaster report permanently
-    into PostgreSQL.
+    Save a disaster report permanently into database.
     """
 
     db = SessionLocal()
@@ -56,6 +55,11 @@ def add_disaster(report, ai_severity=None, prediction=None, resources=None):
 
             resources_json=json.dumps(
                 resources or {},
+                ensure_ascii=False
+            ),
+
+            notification_json=json.dumps(
+                notification or {},
                 ensure_ascii=False
             )
         )
@@ -569,6 +573,11 @@ def _response_plan_dict(disaster):
     except (TypeError, json.JSONDecodeError):
         resources = {}
 
+    try:
+        notification = json.loads(getattr(disaster, "notification_json", None) or "{}")
+    except (TypeError, json.JSONDecodeError):
+        notification = {}
+
     return {
         "id": disaster.id,
         "disaster_type": disaster.disaster_type,
@@ -585,6 +594,7 @@ def _response_plan_dict(disaster):
         "AI_Severity": disaster.ai_severity,
         "Prediction": prediction,
         "Resources": resources,
+        "Notification": notification,
         "has_response_plan": bool(disaster.resources_json),
     }
 

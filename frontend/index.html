@@ -1273,11 +1273,29 @@
 
         <div class="modal-actions tactical-modal-actions">
             <button
+                class="tactical-action-btn pdf-btn"
+                id="downloadMasterPdfBtn"
+                type="button"
+                title="Download official Master Incident Action Plan PDF"
+            >
+                📄 Download Master PDF
+            </button>
+
+            <button
+                class="tactical-action-btn whatsapp-broadcast-btn"
+                id="broadcastWhatsAppBtn"
+                type="button"
+                title="Broadcast tailored alerts & PDFs to all 8 agency numbers"
+            >
+                ⚡ Broadcast to All Agencies (WhatsApp)
+            </button>
+
+            <button
                 class="tactical-action-btn copy-btn"
                 id="copyAlertBtn"
                 type="button"
             >
-                📋 Copy Emergency Alert
+                📋 Copy Master Alert
             </button>
 
             <button
@@ -1299,13 +1317,54 @@
         </div>
 
     </div>
+</div>
 
+<!-- =====================================================
+     WHATSAPP AGENCY CONTACTS DIRECTORY MODAL
+===================================================== -->
+<div class="modal" id="contactsModal">
+    <div class="modal-card modal-lg">
+        <div class="modal-header">
+            <div>
+                <h3>📱 Emergency Agency WhatsApp Directory</h3>
+                <p>Configured recipient phone numbers for automated dispatch &amp; PDF orders</p>
+            </div>
+            <button class="close-btn" id="closeContactsBtnTop" type="button">×</button>
+        </div>
+        <div class="modal-body" id="contactsModalBody">
+            <!-- Rendered dynamically -->
+        </div>
+        <div class="modal-actions">
+            <button class="submit-report-btn" id="closeContactsBtn" type="button">Close Directory</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================
+     WHATSAPP MESSAGE PREVIEW MODAL
+===================================================== -->
+<div class="modal" id="whatsappPreviewModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div>
+                <h3 id="waPreviewTitle">📱 WhatsApp Message Preview</h3>
+                <p id="waPreviewSubtitle">Transmitted payload and PDF download link</p>
+            </div>
+            <button class="close-btn" id="closeWaPreviewBtnTop" type="button">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="wa-preview-meta-strip" id="waPreviewMeta"></div>
+            <pre class="alert-message-terminal" id="waPreviewText" style="white-space: pre-wrap; font-family: monospace;"></pre>
+        </div>
+        <div class="modal-actions">
+            <button class="tactical-action-btn" id="waPreviewOpenBtn" type="button">🚀 Open WhatsApp Web / App</button>
+            <button class="tactical-action-btn copy-btn" id="waPreviewCopyBtn" type="button">📋 Copy Message</button>
+            <button class="submit-report-btn close-result-btn" id="closeWaPreviewBtn" type="button">Close</button>
+        </div>
+    </div>
 </div>
 
 
-<!-- =====================================================
-     LEAFLET JS
-===================================================== -->
 
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"

@@ -3,7 +3,9 @@
 # DISASTER API ROUTES
 # ==========================================================
 
-from fastapi import APIRouter, HTTPException
+import os
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse
 
 from backend.app.models.schema import DisasterReport
 
@@ -18,6 +20,16 @@ from backend.app.services.disaster_service import (
     clear_all_disasters
 )
 
+from backend.app.config import get_all_contacts, update_contact_phone
+from backend.app.services.pdf_service import (
+    generate_master_disaster_pdf,
+    generate_department_disaster_pdf
+)
+from backend.app.services.whatsapp_service import (
+    prepare_all_notifications,
+    send_whatsapp_alert,
+    build_department_message
+)
 
 from backend.app.agents.coordinator import process_disaster
 
@@ -94,7 +106,8 @@ def report_disaster(disaster: DisasterReport):
             disaster,
             result.get("AI_Severity"),
             result.get("Prediction"),
-            result.get("Resources")
+            result.get("Resources"),
+            result.get("Notification")
         )
 
         # --------------------------------------------------
@@ -391,3 +404,189 @@ def api_status():
         "service":
             "Disaster AI API"
     }
+
+
+# ==========================================================
+# CONTACTS CONFIGURATION
+# ==========================================================
+
+@router.get("/contacts")
+def list_contacts():
+    """Retrieve all configured department WhatsApp contacts."""
+    return {
+        "success": True,
+        "contacts": get_all_contacts()
+    }
+
+
+@router.post("/contacts/{contact_id}")
+async def update_contact(contact_id: str, request: Request):
+    """Update phone number for a specific department."""
+    try:
+        body = await request.json()
+        phone = body.get("phone", "")
+        updated = update_contact_phone(contact_id, phone)
+        if not updated:
+            raise HTTPException(status_code=404, detail=f"Contact '{contact_id}' not found.")
+        return {
+            "success": True,
+            "message": f"Updated {updated['name']} phone number.",
+            "contact": updated
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to update contact: {str(e)}")
+
+
+# ==========================================================
+# PDF GENERATION & DOWNLOAD
+# ==========================================================
+
+@router.get("/disasters/{disaster_id}/pdf")
+def download_master_pdf(disaster_id: int):
+    """
+    Generate and download the Master Incident Action Plan (IAP) PDF
+    intended for Central Command / EOC.
+    """
+    plan = get_response_plan(disaster_id)
+    if not plan:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Disaster incident #{disaster_id} response plan not found."
+        )
+
+    try:
+        pdf_path = generate_master_disaster_pdf(plan)
+        if not os.path.exists(pdf_path):
+            raise HTTPException(status_code=500, detail="Failed to locate generated Master PDF.")
+        return FileResponse(
+            pdf_path,
+            media_type="application/pdf",
+            filename=f"Disaster_{disaster_id}_Master_IAP.pdf"
+        )
+    except Exception as e:
+        print("❌ ERROR generating master PDF:", e)
+        raise HTTPException(status_code=500, detail=f"Unable to generate Master PDF: {str(e)}")
+
+
+@router.get("/disasters/{disaster_id}/pdf/{department}")
+def download_department_pdf(disaster_id: int, department: str):
+    """
+    Generate and download a Department-Specific Action Order PDF
+    (food, water, shelter, medical, rescue, police, transport).
+    """
+    plan = get_response_plan(disaster_id)
+    if not plan:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Disaster incident #{disaster_id} response plan not found."
+        )
+
+    clean_dept = department.lower().strip()
+    valid_depts = ["food", "water", "shelter", "medical", "rescue", "police", "transport"]
+    if clean_dept not in valid_depts:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid department '{department}'. Must be one of {valid_depts}"
+        )
+
+    try:
+        pdf_path = generate_department_disaster_pdf(plan, clean_dept)
+        if not os.path.exists(pdf_path):
+            raise HTTPException(status_code=500, detail="Failed to locate generated Department PDF.")
+        return FileResponse(
+            pdf_path,
+            media_type="application/pdf",
+            filename=f"Disaster_{disaster_id}_{clean_dept.capitalize()}_Order.pdf"
+        )
+    except Exception as e:
+        print(f"❌ ERROR generating {department} PDF:", e)
+        raise HTTPException(status_code=500, detail=f"Unable to generate Department PDF: {str(e)}")
+
+
+# ==========================================================
+# WHATSAPP NOTIFICATIONS SUITE & DISPATCH
+# ==========================================================
+
+@router.get("/disasters/{disaster_id}/notifications")
+def get_disaster_notifications(disaster_id: int, request: Request):
+    """
+    Get the complete multi-agency WhatsApp notification suite:
+    Master plan for Central Command and separate targeted action orders
+    for each of the 7 resource allocation departments with PDF links & wa.me URLs.
+    """
+    plan = get_response_plan(disaster_id)
+    if not plan:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Disaster incident #{disaster_id} response plan not found."
+        )
+
+    base_url = f"{request.url.scheme}://{request.url.netloc}"
+    suite = prepare_all_notifications(plan, base_url)
+    return {
+        "success": True,
+        "disaster_id": disaster_id,
+        "suite": suite
+    }
+
+
+@router.post("/disasters/{disaster_id}/whatsapp/dispatch")
+async def dispatch_whatsapp_notification(disaster_id: int, request: Request):
+    """
+    Dispatch WhatsApp emergency notification to one or all 8 departments.
+    Payload: { "channel": "all" | "central_command" | "food" | "water" | ... }
+    """
+    plan = get_response_plan(disaster_id)
+    if not plan:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Disaster incident #{disaster_id} response plan not found."
+        )
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    target_channel = body.get("channel", "all").lower().strip()
+    base_url = f"{request.url.scheme}://{request.url.netloc}"
+    suite = prepare_all_notifications(plan, base_url)
+    channels = suite.get("channels", {})
+
+    dispatched = []
+
+    if target_channel == "all":
+        for ch_id, ch_data in channels.items():
+            res = send_whatsapp_alert(ch_data["phone"], ch_data["message_text"])
+            dispatched.append({
+                "channel_id": ch_id,
+                "name": ch_data["dept_name"],
+                "phone": ch_data["formatted_phone"],
+                "result": res,
+                "wa_link": ch_data["wa_link"]
+            })
+    elif target_channel in channels:
+        ch_data = channels[target_channel]
+        res = send_whatsapp_alert(ch_data["phone"], ch_data["message_text"])
+        dispatched.append({
+            "channel_id": target_channel,
+            "name": ch_data["dept_name"],
+            "phone": ch_data["formatted_phone"],
+            "result": res,
+            "wa_link": ch_data["wa_link"]
+        })
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown channel '{target_channel}'. Valid: 'all', {list(channels.keys())}"
+        )
+
+    return {
+        "success": True,
+        "message": f"WhatsApp dispatch initiated for target: {target_channel}",
+        "disaster_id": disaster_id,
+        "dispatched_count": len(dispatched),
+        "dispatches": dispatched
+    }

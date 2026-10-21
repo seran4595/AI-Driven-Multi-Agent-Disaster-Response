@@ -2509,11 +2509,29 @@ function renderResponsePlans() {
                 <div class="plan-footer-actions">
                     <button
                         type="button"
+                        class="plan-card-pdf-btn"
+                        onclick="event.stopPropagation(); downloadDisasterPDF(${Number(plan.id)})"
+                        title="Download official Master PDF report for incident #${Number(plan.id)}"
+                        style="background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); padding: 7px 11px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                    >
+                        📄 PDF
+                    </button>
+                    <button
+                        type="button"
+                        class="plan-card-wa-btn"
+                        onclick="event.stopPropagation(); broadcastWhatsAppToAll(${Number(plan.id)})"
+                        title="Broadcast emergency order to all 8 agency numbers"
+                        style="background: rgba(37, 211, 102, 0.15); color: #4ade80; border: 1px solid rgba(37, 211, 102, 0.4); padding: 7px 11px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                    >
+                        📱 WhatsApp
+                    </button>
+                    <button
+                        type="button"
                         class="plan-card-print-btn"
                         onclick="event.stopPropagation(); printSingleDisasterPlanById(${Number(plan.id)})"
                         title="Print tactical response plan for ${escapeHtml(plan.disaster_type || 'Disaster')} (#${Number(plan.id)})"
                     >
-                        🖨️ Print Plan
+                        🖨️ Print
                     </button>
                     <button
                         type="button"
@@ -3762,37 +3780,400 @@ function showAIResult(data, isSavedPlan = false) {
             </div>
         </div>
 
-        <!-- EMERGENCY DISPATCH NOTIFICATION BROADCAST BOX -->
-        <div class="tactical-notification-box">
-            <div class="notification-box-header">
-                <div class="notif-header-left">
-                    <span class="whatsapp-icon">💬</span>
-                    <div>
-                        <h5>Emergency Dispatch Alert Payload (Notification Agent)</h5>
-                        <small>Prepared for Meta WhatsApp Cloud API &amp; Multi-Agency Broadcast</small>
-                    </div>
-                </div>
-                <div class="notif-channel-badge">
-                    <span>●</span> CHANNEL: META_WHATSAPP_CLOUD_API
-                </div>
-            </div>
-
-            <pre class="alert-message-terminal">${escapeHtml(alertMessage)}</pre>
-
-            <div class="alert-action-toolbar">
-                <button type="button" class="copy-alert-inline-btn" onclick="copyEmergencyAlert()">
-                    📋 Copy Broadcast Text
-                </button>
-                ${Number.isFinite(latitude) && Number.isFinite(longitude) ? `
-                    <button type="button" class="focus-map-inline-btn" onclick="focusPlanOnMap(${latitude}, ${longitude}, '${escapeHtml(disasterType)}')">
-                        🗺️ Focus Coordinates on Live Map
-                    </button>
-                ` : ''}
-            </div>
-        </div>
+        <!-- MULTI-AGENCY WHATSAPP DISPATCH & PDF COMMAND CENTER -->
+        ${renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, city, state, country, resources, prediction, alertMessage, latitude, longitude)}
     `;
 
     modal.classList.add("show");
+}
+
+
+// =====================================================
+// MULTI-AGENCY WHATSAPP & PDF SYSTEM
+// =====================================================
+
+window.currentAgencyMessages = {};
+
+function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, city, state, country, resources, prediction, alertMessage, latitude, longitude) {
+    const locStr = `${city || ''}, ${state || ''}`.replace(/^,\s*|,\s*$/g, '') || "Emergency Coordinates";
+    const baseOrigin = window.location.origin;
+
+    const agencies = [
+        {
+            id: "food",
+            name: "Food & Civil Supplies",
+            phone: "918015808283",
+            displayPhone: "+91 80158 08283",
+            icon: "🍲",
+            color: "#ea580c",
+            summary: `Packets: ${formatNumber(resources.Food?.FoodPackets || resources.Food?.required_food_packets || 0)} | Meals: ${resources.Food?.MealsPerDay || 3}/day | ${resources.Food?.MealType || 'Prepared Meals'}`,
+            directive: "Mobilize community kitchens & dispatch food distribution vans immediately."
+        },
+        {
+            id: "water",
+            name: "Water Supply & Sanitation",
+            phone: "918015808283",
+            displayPhone: "+91 80158 08283",
+            icon: "💧",
+            color: "#0284c7",
+            summary: `Water: ${formatNumber(resources.Water?.TotalWaterRequired_Liters || resources.Water?.water_liters_per_day || 0)} L/day | Tankers: ${resources.Water?.WaterTankers || 0} units`,
+            directive: "Establish potable water supply tanks and chlorination distribution points."
+        },
+        {
+            id: "shelter",
+            name: "Shelter & Relief Camps",
+            phone: "918015808283",
+            displayPhone: "+91 80158 08283",
+            icon: "⛺",
+            color: "#0d9488",
+            summary: `Shelters: ${resources.Shelter?.TemporaryShelters || 0} | Tents: ${formatNumber(resources.Shelter?.FamilyTents || 0)} | Bedding: ${formatNumber(resources.Shelter?.Blankets || 0)}`,
+            directive: "Activate high-ground schools, stadiums, and emergency tent cities for intake."
+        },
+        {
+            id: "medical",
+            name: "Medical & Health Emergency",
+            phone: "917397071819",
+            displayPhone: "+91 73970 71819",
+            icon: "🏥",
+            color: "#e11d48",
+            summary: `Ambulances: ${resources.Medical?.Ambulances || 0} | Doctors: ${resources.Medical?.Doctors || 0} | Paramedics: ${resources.Medical?.Paramedics || 0}`,
+            directive: "Deploy mobile triage teams, ambulances, and trauma stabilization kits."
+        },
+        {
+            id: "rescue",
+            name: "Search & Rescue (NDRF/SDRF)",
+            phone: "919500330279",
+            displayPhone: "+91 95003 30279",
+            icon: "🛟",
+            color: "#b45309",
+            summary: `Teams: ${resources.Rescue?.RescueTeams || 0} | Boats: ${resources.Rescue?.RescueBoats || 0} | Choppers: ${resources.Rescue?.Helicopters || 0}`,
+            directive: "Commence deep search, aquatic extraction, and airborne reconnaissance."
+        },
+        {
+            id: "police",
+            name: "Police & Security Corps",
+            phone: "919500330279",
+            displayPhone: "+91 95003 30279",
+            icon: "🚓",
+            color: "#4338ca",
+            summary: `Officers: ${formatNumber(resources.Police?.PolicePersonnel || 0)} | Patrols: ${resources.Police?.PatrolUnits || 0} | Checkpoints: ${resources.Police?.Checkpoints || 0}`,
+            directive: "Secure disaster perimeter cordons, anti-looting patrols & green corridors."
+        },
+        {
+            id: "transport",
+            name: "Logistics & Transport Fleet",
+            phone: "919500330279",
+            displayPhone: "+91 95003 30279",
+            icon: "🚚",
+            color: "#475569",
+            summary: `Buses: ${resources.Transport?.EvacuationBuses || 0} | Supply Trucks: ${resources.Transport?.SupplyTrucks || 0} | 4x4 Offroad: ${resources.Transport?.OffRoadVehicles || 0}`,
+            directive: "Position evacuation bus convoys and dispatch heavy cargo supply fleet."
+        }
+    ];
+
+    const masterPdfUrl = `${baseOrigin}/api/disasters/${id}/pdf`;
+    const masterMsg = `🚨 *DISASTER COMMAND // MASTER INCIDENT ACTION PLAN (IAP)* 🚨\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📍 *Incident ID:* #${id} | *Type:* ${String(disasterType).toUpperCase()}\n⚠️ *Severity:* ${String(aiSeverity).toUpperCase()}\n🗺️ *Location:* ${locStr}\n👥 *Affected Population:* ${formatNumber(data.affected_people || 0)}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📄 *Download Master PDF Report:*\n${masterPdfUrl}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Authorized by AI Multi-Agent Coordinator`;
+    const masterWaUrl = `https://wa.me/917397071819?text=${encodeURIComponent(masterMsg)}`;
+
+    window.currentAgencyMessages["central_command"] = {
+        title: "Central Command / Master EOC",
+        phone: "+91 73970 71819",
+        text: masterMsg,
+        waUrl: masterWaUrl,
+        pdfUrl: masterPdfUrl
+    };
+
+    agencies.forEach(agency => {
+        const deptPdfUrl = `${baseOrigin}/api/disasters/${id}/pdf/${agency.id}`;
+        const deptMsg = `🚨 *EMERGENCY ORDER: ${agency.name.toUpperCase()}* 🚨\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📍 *Incident ID:* #${id} (${disasterType})\n🗺️ *Location:* ${locStr}\n⚠️ *Severity:* ${aiSeverity}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📦 *RESOURCE MANDATE:*\n${agency.summary}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n⚡ *Directive:* ${agency.directive}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📄 *Download Action Order PDF:*\n${deptPdfUrl}\n━━━━━━━━━━━━━━━━━━━━━━━━━\nOfficial Directive • AI Multi-Agent Coordinator`;
+        const waLink = `https://wa.me/${agency.phone}?text=${encodeURIComponent(deptMsg)}`;
+
+        window.currentAgencyMessages[agency.id] = {
+            title: agency.name,
+            phone: agency.displayPhone,
+            text: deptMsg,
+            waUrl: waLink,
+            pdfUrl: deptPdfUrl
+        };
+    });
+
+    return `
+        <div class="tactical-whatsapp-hub">
+            <div class="wa-hub-header">
+                <div class="wa-hub-title-box">
+                    <span class="wa-hub-icon">💬</span>
+                    <div>
+                        <h4>Multi-Agency WhatsApp Dispatch &amp; PDF Command Center</h4>
+                        <small>Separate resource orders sent to specialized departmental numbers + Master Plan to Central Command with official PDF directives</small>
+                    </div>
+                </div>
+
+                <div class="wa-hub-controls">
+                    <span class="wa-active-badge">
+                        <span class="wa-active-dot"></span>
+                        8 CHANNELS ACTIVE
+                    </span>
+                    <button type="button" class="wa-broadcast-master-btn" onclick="broadcastWhatsAppToAll(${id})">
+                        ⚡ Broadcast to All 8 Agencies
+                    </button>
+                    <button type="button" class="wa-directory-btn" onclick="openContactsDirectoryModal()">
+                        📁 Agency Directory
+                    </button>
+                </div>
+            </div>
+
+            <!-- CENTRAL COMMAND MASTER CHANNEL -->
+            <div class="wa-master-channel-card">
+                <div class="wa-master-top">
+                    <div class="wa-channel-info-left">
+                        <div class="wa-channel-icon">🏢</div>
+                        <div class="wa-channel-title">
+                            <h5>Central Command &amp; Emergency Operations Center (EOC)</h5>
+                            <span class="wa-phone-tag">📱 +91 73970 71819</span>
+                            <span class="wa-role-tag">• Master Incident Oversight &amp; Multi-Agency Orchestration</span>
+                        </div>
+                    </div>
+                    <div class="wa-master-actions">
+                        <a href="${masterWaUrl}" target="_blank" class="wa-btn wa-btn-primary" title="Open WhatsApp with Master Plan &amp; PDF link">
+                            🚀 Send Master Plan via WhatsApp
+                        </a>
+                        <button type="button" class="wa-btn wa-btn-pdf" onclick="downloadDisasterPDF(${id})" title="Download official Master Incident Action Plan PDF">
+                            📄 Download Master IAP PDF
+                        </button>
+                        <button type="button" class="wa-btn wa-btn-outline" onclick="previewDeptWhatsApp('central_command')">
+                            👁️ Preview Message
+                        </button>
+                    </div>
+                </div>
+                <div class="wa-quota-preview">
+                    <strong>MASTER DIRECTIVE:</strong> Coordinated 7-agency response active. Executive action report generated with high-priority evacuation and resource allocation telemetry.
+                </div>
+            </div>
+
+            <!-- 7 SPECIALIZED DEPARTMENT CHANNELS -->
+            <div class="wa-agencies-grid">
+                ${agencies.map(agency => {
+                    const waLink = window.currentAgencyMessages[agency.id]?.waUrl || `https://wa.me/${agency.phone}`;
+
+                    return `
+                        <div class="wa-agency-card" style="border-left: 3px solid ${agency.color};">
+                            <div class="wa-agency-top">
+                                <span class="wa-agency-icon" style="background: ${agency.color}20; color: ${agency.color};">
+                                    ${agency.icon}
+                                </span>
+                                <div class="wa-agency-titles">
+                                    <h6>${escapeHtml(agency.name)}</h6>
+                                    <span class="wa-agency-phone">📱 ${agency.displayPhone}</span>
+                                </div>
+                            </div>
+
+                            <div class="wa-quota-preview">
+                                <strong>Assigned Quota:</strong><br>${escapeHtml(agency.summary)}
+                            </div>
+
+                            <div class="wa-agency-actions">
+                                <a href="${waLink}" target="_blank" class="wa-btn wa-btn-primary wa-btn-sm" title="Send targeted WhatsApp order with PDF link">
+                                    💬 Send WhatsApp
+                                </a>
+                                <button type="button" class="wa-btn wa-btn-pdf wa-btn-sm" onclick="downloadDisasterPDF(${id}, '${agency.id}')" title="Download ${agency.name} Action Order PDF">
+                                    📄 PDF Order
+                                </button>
+                                <button type="button" class="wa-btn wa-btn-outline wa-btn-sm" onclick="previewDeptWhatsApp('${agency.id}')" title="Preview formatted message text">
+                                    👁️ Preview
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function previewDeptWhatsApp(channelId) {
+    const item = window.currentAgencyMessages?.[channelId];
+    if (!item) return;
+
+    const modal = document.getElementById("whatsappPreviewModal");
+    const titleEl = document.getElementById("waPreviewTitle");
+    const metaEl = document.getElementById("waPreviewMeta");
+    const textEl = document.getElementById("waPreviewText");
+    const openBtn = document.getElementById("waPreviewOpenBtn");
+    const copyBtn = document.getElementById("waPreviewCopyBtn");
+    const closeBtnTop = document.getElementById("closeWaPreviewBtnTop");
+    const closeBtn = document.getElementById("closeWaPreviewBtn");
+
+    if (!modal) return;
+
+    if (titleEl) titleEl.textContent = `📱 WhatsApp Preview: ${item.title}`;
+    if (metaEl) {
+        metaEl.innerHTML = `
+            <span>Recipient: <strong>${escapeHtml(item.phone)}</strong></span>
+            <span>PDF: <strong>${escapeHtml(item.pdfUrl ? 'Attached' : 'None')}</strong></span>
+        `;
+    }
+    if (textEl) textEl.textContent = item.text;
+
+    if (openBtn) {
+        openBtn.onclick = () => window.open(item.waUrl, "_blank");
+    }
+
+    if (copyBtn) {
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(item.text).then(() => {
+                showToastNotification("✅ WhatsApp Message copied to clipboard!");
+            }).catch(() => {
+                copyFallback(item.text);
+            });
+        };
+    }
+
+    const closeHandler = () => modal.classList.remove("show");
+    if (closeBtnTop) closeBtnTop.onclick = closeHandler;
+    if (closeBtn) closeBtn.onclick = closeHandler;
+
+    modal.classList.add("show");
+}
+
+function downloadDisasterPDF(disasterId, department = "") {
+    if (!disasterId) {
+        alert("Disaster ID not available.");
+        return;
+    }
+    const cleanDept = (department || "").trim().toLowerCase();
+    const url = cleanDept 
+        ? `/api/disasters/${disasterId}/pdf/${cleanDept}`
+        : `/api/disasters/${disasterId}/pdf`;
+
+    showToastNotification(`📄 Generating ${cleanDept ? cleanDept.toUpperCase() : 'Master'} Action PDF...`);
+    window.open(url, "_blank");
+}
+
+async function broadcastWhatsAppToAll(disasterId) {
+    if (!disasterId) {
+        disasterId = currentActivePlan?.report?.id || currentActivePlan?.id;
+    }
+    if (!disasterId) {
+        alert("Please select or open an active disaster report first.");
+        return;
+    }
+
+    showToastNotification("⚡ Initiating WhatsApp broadcast to all 8 emergency agencies...");
+
+    try {
+        const response = await fetch(`/api/disasters/${disasterId}/whatsapp/dispatch`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ channel: "all" })
+        });
+
+        if (!response.ok) {
+            throw new Error("Broadcast failed on server.");
+        }
+
+        const data = await response.json();
+        showToastNotification(`✅ Coordinated broadcast active! Dispatched to ${data.dispatched_count || 8} agencies.`);
+
+        // Ask if user wants to open the WhatsApp chats
+        setTimeout(() => {
+            if (confirm("✅ Broadcast prepared for all 8 departments!\n\nWould you like to open the Central Command Master WhatsApp chat now?")) {
+                const masterWaUrl = window.currentAgencyMessages?.["central_command"]?.waUrl || 
+                    `https://wa.me/917397071819`;
+                window.open(masterWaUrl, "_blank");
+            }
+        }, 300);
+
+    } catch (e) {
+        console.error("Broadcast error:", e);
+        // Fallback: open Central Command WhatsApp directly
+        const masterWaUrl = window.currentAgencyMessages?.["central_command"]?.waUrl || 
+            `https://wa.me/917397071819`;
+        window.open(masterWaUrl, "_blank");
+    }
+}
+
+async function openContactsDirectoryModal() {
+    const modal = document.getElementById("contactsModal");
+    const body = document.getElementById("contactsModalBody");
+    const closeBtnTop = document.getElementById("closeContactsBtnTop");
+    const closeBtn = document.getElementById("closeContactsBtn");
+
+    if (!modal || !body) return;
+
+    body.innerHTML = `<p style="padding: 20px; text-align: center; color: #94a3b8;">Loading agency directory...</p>`;
+    modal.classList.add("show");
+
+    const closeHandler = () => modal.classList.remove("show");
+    if (closeBtnTop) closeBtnTop.onclick = closeHandler;
+    if (closeBtn) closeBtn.onclick = closeHandler;
+
+    try {
+        const res = await fetch("/api/contacts");
+        const json = await res.json();
+        const contacts = json.contacts || {};
+
+        let rows = "";
+        for (const [key, c] of Object.entries(contacts)) {
+            rows += `
+                <tr>
+                    <td><span style="font-size: 1.4rem;">${c.icon || '📱'}</span></td>
+                    <td>
+                        <strong>${escapeHtml(c.name)}</strong>
+                        <div style="font-size: 11px; color: #94a3b8;">${escapeHtml(c.role || '')}</div>
+                    </td>
+                    <td>
+                        <input type="text" class="contacts-phone-input" id="contact_input_${key}" value="${escapeHtml(c.phone)}" placeholder="Phone number" />
+                    </td>
+                    <td>
+                        <button type="button" class="contacts-save-btn" onclick="saveContactPhone('${key}')">Save</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        body.innerHTML = `
+            <table class="contacts-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th>Department / Authority</th>
+                        <th>WhatsApp Phone (Country Code)</th>
+                        <th style="width: 80px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+            <div style="margin-top: 15px; font-size: 12px; color: #94a3b8; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px;">
+                💡 <em>Default configured recipients: Central Command &amp; Medical: <strong>+91 7397071819</strong> | Food, Water, Shelter: <strong>+91 8015808283</strong> | Rescue, Police, Transport: <strong>+91 9500330279</strong>.</em>
+            </div>
+        `;
+    } catch (e) {
+        body.innerHTML = `<p style="color: #ef4444; padding: 20px;">Failed to load contacts directory.</p>`;
+    }
+}
+
+async function saveContactPhone(contactId) {
+    const input = document.getElementById(`contact_input_${contactId}`);
+    if (!input) return;
+    const phone = input.value.trim();
+
+    try {
+        const res = await fetch(`/api/contacts/${contactId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone })
+        });
+        const json = await res.json();
+        if (json.success) {
+            showToastNotification(`✅ Updated phone for ${json.contact.name}!`);
+        } else {
+            alert("Failed to update contact number.");
+        }
+    } catch (e) {
+        alert("Error saving contact: " + e.toString());
+    }
 }
 
 
@@ -3806,6 +4187,8 @@ function setupResultModalActions() {
     const closeBtn = document.getElementById("closeResultBtn");
     const copyAlertBtn = document.getElementById("copyAlertBtn");
     const printPlanBtn = document.getElementById("printPlanBtn");
+    const downloadMasterPdfBtn = document.getElementById("downloadMasterPdfBtn");
+    const broadcastWhatsAppBtn = document.getElementById("broadcastWhatsAppBtn");
 
     if (closeBtnTop) {
         closeBtnTop.addEventListener("click", () => {
@@ -3837,7 +4220,26 @@ function setupResultModalActions() {
     if (printPlanBtn) {
         printPlanBtn.addEventListener("click", printTacticalPlan);
     }
+
+    if (downloadMasterPdfBtn) {
+        downloadMasterPdfBtn.addEventListener("click", () => {
+            const id = currentActivePlan?.report?.id || currentActivePlan?.id;
+            if (id) {
+                downloadDisasterPDF(id);
+            }
+        });
+    }
+
+    if (broadcastWhatsAppBtn) {
+        broadcastWhatsAppBtn.addEventListener("click", () => {
+            const id = currentActivePlan?.report?.id || currentActivePlan?.id;
+            if (id) {
+                broadcastWhatsAppToAll(id);
+            }
+        });
+    }
 }
+
 
 function copyEmergencyAlert() {
     if (!currentActivePlan) return;

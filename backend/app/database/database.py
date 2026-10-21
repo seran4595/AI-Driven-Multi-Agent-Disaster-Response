@@ -45,6 +45,7 @@ def ensure_response_plan_columns():
         "ai_severity": "TEXT",
         "prediction_json": "TEXT",
         "resources_json": "TEXT",
+        "notification_json": "TEXT",
     }
 
     with engine.begin() as connection:

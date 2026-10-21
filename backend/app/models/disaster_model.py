@@ -88,3 +88,8 @@ class Disaster(Base):
         Text,
         nullable=True
     )
+
+    notification_json = Column(
+        Text,
+        nullable=True
+    )
