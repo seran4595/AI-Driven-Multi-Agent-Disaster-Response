@@ -2553,17 +2553,23 @@ function renderResponsePlans() {
 
 async function openSavedResponsePlan(id) {
     try {
-        const response = await fetch(`/response-plans/${Number(id)}`);
-        if (!response.ok) {
-            throw new Error("Response plan could not be loaded.");
+        let plan = (allSavedPlans || []).find(p => Number(p.id) === Number(id));
+        if (!plan) {
+            let response = await fetch(`/response-plans/${Number(id)}`);
+            if (!response.ok) {
+                response = await fetch(`/api/response-plans/${Number(id)}`);
+            }
+            if (!response.ok) {
+                throw new Error(`Incident plan #${id} could not be retrieved (Status ${response.status}).`);
+            }
+            plan = await response.json();
         }
 
-        const plan = await response.json();
         currentActivePlan = plan;
         showAIResult(plan, true);
     } catch (error) {
-        console.error(error);
-        alert("❌ Unable to open the saved response plan.");
+        console.error("openSavedResponsePlan error:", error);
+        alert("❌ Unable to open the saved response plan: " + (error.message || error));
     }
 }
 
