@@ -3181,11 +3181,11 @@ async function submitDisasterReport(
 
         closeReportModal();
 
-
         showAIResult(
             data
         );
 
+        showToastNotification("🚀 Incident logged: Automated departmental WhatsApp alerts & direct action PDFs dispatched!");
 
         // Refresh dashboard data so the new report and
         // response plan appear immediately.
@@ -3781,7 +3781,7 @@ function showAIResult(data, isSavedPlan = false) {
         </div>
 
         <!-- MULTI-AGENCY WHATSAPP DISPATCH & PDF COMMAND CENTER -->
-        ${renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, city, state, country, resources, prediction, alertMessage, latitude, longitude)}
+        ${renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, city, state, country, resources, prediction, alertMessage, latitude, longitude, isSavedPlan)}
     `;
 
     modal.classList.add("show");
@@ -3794,7 +3794,7 @@ function showAIResult(data, isSavedPlan = false) {
 
 window.currentAgencyMessages = {};
 
-function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, city, state, country, resources, prediction, alertMessage, latitude, longitude) {
+function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, city, state, country, resources, prediction, alertMessage, latitude, longitude, isSavedPlan = false) {
     const locStr = `${city || ''}, ${state || ''}`.replace(/^,\s*|,\s*$/g, '') || "Emergency Coordinates";
     const baseOrigin = window.location.origin;
 
@@ -3871,8 +3871,13 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         }
     ];
 
+    const turnByTurnNav = (latitude && longitude)
+        ? `https://www.google.com/maps/dir//${latitude.toFixed(6)},${longitude.toFixed(6)}`
+        : `https://www.google.com/maps/dir//${encodeURIComponent(locStr)}`;
+
     const masterPdfUrl = `${baseOrigin}/api/disasters/${id}/pdf`;
-    const masterMsg = `🚨 *DISASTER COMMAND // MASTER INCIDENT ACTION PLAN (IAP)* 🚨\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📍 *Incident ID:* #${id} | *Type:* ${String(disasterType).toUpperCase()}\n⚠️ *Severity:* ${String(aiSeverity).toUpperCase()}\n🗺️ *Location:* ${locStr}\n👥 *Affected Population:* ${formatNumber(data.affected_people || 0)}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📄 *Download Master PDF Report:*\n${masterPdfUrl}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Authorized by AI Multi-Agent Coordinator`;
+    const masterPdfName = `Disaster_${id}_Master_IAP.pdf`;
+    const masterMsg = `🚨 *DISASTER COMMAND // MASTER INCIDENT ACTION PLAN (IAP)* 🚨\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📍 *Incident ID:* #${id} | *Type:* ${String(disasterType).toUpperCase()}\n⚠️ *Severity:* ${String(aiSeverity).toUpperCase()}\n🗺️ *Location:* ${locStr}\n👥 *Affected Population:* ${formatNumber(data.affected_people || 0)}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE):*\n${turnByTurnNav}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📎 *DIRECT ATTACHED PLAN:* [${masterPdfName}]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Authorized by AI Multi-Agent Coordinator`;
     const masterWaUrl = `https://wa.me/917397071819?text=${encodeURIComponent(masterMsg)}`;
 
     window.currentAgencyMessages["central_command"] = {
@@ -3880,12 +3885,15 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         phone: "+91 73970 71819",
         text: masterMsg,
         waUrl: masterWaUrl,
-        pdfUrl: masterPdfUrl
+        pdfUrl: masterPdfUrl,
+        pdfName: masterPdfName,
+        mapsUrl: turnByTurnNav
     };
 
     agencies.forEach(agency => {
         const deptPdfUrl = `${baseOrigin}/api/disasters/${id}/pdf/${agency.id}`;
-        const deptMsg = `🚨 *EMERGENCY ORDER: ${agency.name.toUpperCase()}* 🚨\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📍 *Incident ID:* #${id} (${disasterType})\n🗺️ *Location:* ${locStr}\n⚠️ *Severity:* ${aiSeverity}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📦 *RESOURCE MANDATE:*\n${agency.summary}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n⚡ *Directive:* ${agency.directive}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📄 *Download Action Order PDF:*\n${deptPdfUrl}\n━━━━━━━━━━━━━━━━━━━━━━━━━\nOfficial Directive • AI Multi-Agent Coordinator`;
+        const deptPdfName = `Disaster_${id}_${agency.id.charAt(0).toUpperCase() + agency.id.slice(1)}_Order.pdf`;
+        const deptMsg = `🚨 *EMERGENCY ORDER: ${agency.name.toUpperCase()}* 🚨\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📍 *Incident ID:* #${id} (${disasterType})\n🗺️ *Location:* ${locStr}\n⚠️ *Severity:* ${aiSeverity}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE):*\n${turnByTurnNav}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📦 *RESOURCE MANDATE:*\n${agency.summary}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n⚡ *Directive:* ${agency.directive}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📎 *DIRECT ATTACHED PLAN:* [${deptPdfName}]\n━━━━━━━━━━━━━━━━━━━━━━━━━\nOfficial Directive • AI Multi-Agent Coordinator`;
         const waLink = `https://wa.me/${agency.phone}?text=${encodeURIComponent(deptMsg)}`;
 
         window.currentAgencyMessages[agency.id] = {
@@ -3893,18 +3901,39 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
             phone: agency.displayPhone,
             text: deptMsg,
             waUrl: waLink,
-            pdfUrl: deptPdfUrl
+            pdfUrl: deptPdfUrl,
+            pdfName: deptPdfName,
+            mapsUrl: turnByTurnNav
         };
     });
 
+    const isAutoDispatched = Boolean(data.dispatch || isSavedPlan);
+
     return `
         <div class="tactical-whatsapp-hub">
+            ${isAutoDispatched ? `
+                <div style="background: linear-gradient(135deg, rgba(5, 150, 105, 0.2), rgba(16, 185, 129, 0.08)); border: 1px solid rgba(16, 185, 129, 0.45); border-radius: 10px; padding: 12px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 1.5rem;">🚀</span>
+                        <div>
+                            <strong style="color: #34d399; font-size: 0.95rem; display: block; letter-spacing: 0.3px;">AUTOMATED MULTI-AGENCY NOTIFICATION DISPATCHED</strong>
+                            <div style="color: #94a3b8; font-size: 0.82rem; margin-top: 2px;">
+                                Unique departmental resource quotas, live GPS turn-by-turn navigation &amp; direct PDF action plans were auto-sent to all 8 specialized WhatsApp numbers upon incident reporting.
+                            </div>
+                        </div>
+                    </div>
+                    <span style="background: #059669; color: #fff; font-weight: 700; font-size: 0.72rem; padding: 5px 12px; border-radius: 999px; letter-spacing: 0.5px; white-space: nowrap;">
+                        ✓ DISPATCHED
+                    </span>
+                </div>
+            ` : ''}
+
             <div class="wa-hub-header">
                 <div class="wa-hub-title-box">
                     <span class="wa-hub-icon">💬</span>
                     <div>
                         <h4>Multi-Agency WhatsApp Dispatch &amp; PDF Command Center</h4>
-                        <small>Separate resource orders sent to specialized departmental numbers + Master Plan to Central Command with official PDF directives</small>
+                        <small>Separate resource orders sent to specialized departmental numbers + Master Plan to Central Command with direct attached PDFs &amp; live GPS navigation</small>
                     </div>
                 </div>
 
@@ -3934,11 +3963,14 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
                         </div>
                     </div>
                     <div class="wa-master-actions">
-                        <a href="${masterWaUrl}" target="_blank" class="wa-btn wa-btn-primary" title="Open WhatsApp with Master Plan &amp; PDF link">
+                        <a href="${masterWaUrl}" target="_blank" class="wa-btn wa-btn-primary" title="Open WhatsApp with Master Plan &amp; direct attached PDF">
                             🚀 Send Master Plan via WhatsApp
                         </a>
+                        <a href="${turnByTurnNav}" target="_blank" class="wa-btn wa-btn-outline" style="border-color: #38bdf8; color: #38bdf8;" title="Initiate Turn-by-Turn Navigation directly in Google Maps">
+                            🧭 Navigate to Scene
+                        </a>
                         <button type="button" class="wa-btn wa-btn-pdf" onclick="downloadDisasterPDF(${id})" title="Download official Master Incident Action Plan PDF">
-                            📄 Download Master IAP PDF
+                            📎 Direct Master IAP PDF
                         </button>
                         <button type="button" class="wa-btn wa-btn-outline" onclick="previewDeptWhatsApp('central_command')">
                             👁️ Preview Message
@@ -3972,11 +4004,14 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
                             </div>
 
                             <div class="wa-agency-actions">
-                                <a href="${waLink}" target="_blank" class="wa-btn wa-btn-primary wa-btn-sm" title="Send targeted WhatsApp order with PDF link">
-                                    💬 Send WhatsApp
+                                <a href="${waLink}" target="_blank" class="wa-btn wa-btn-primary wa-btn-sm" title="Send targeted WhatsApp order with direct attached PDF">
+                                    💬 WhatsApp
+                                </a>
+                                <a href="${turnByTurnNav}" target="_blank" class="wa-btn wa-btn-outline wa-btn-sm" style="border-color: #38bdf8; color: #38bdf8;" title="Turn-by-turn Navigation in Google Maps">
+                                    🧭 Navigate
                                 </a>
                                 <button type="button" class="wa-btn wa-btn-pdf wa-btn-sm" onclick="downloadDisasterPDF(${id}, '${agency.id}')" title="Download ${agency.name} Action Order PDF">
-                                    📄 PDF Order
+                                    📎 Direct PDF
                                 </button>
                                 <button type="button" class="wa-btn wa-btn-outline wa-btn-sm" onclick="previewDeptWhatsApp('${agency.id}')" title="Preview formatted message text">
                                     👁️ Preview

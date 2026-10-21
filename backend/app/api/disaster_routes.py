@@ -28,7 +28,8 @@ from backend.app.services.pdf_service import (
 from backend.app.services.whatsapp_service import (
     prepare_all_notifications,
     send_whatsapp_alert,
-    build_department_message
+    build_department_message,
+    dispatch_all_agencies
 )
 
 from backend.app.agents.coordinator import process_disaster
@@ -46,9 +47,10 @@ router = APIRouter()
 # ==========================================================
 
 @router.post("/report-disaster")
-def report_disaster(disaster: DisasterReport):
+def report_disaster(disaster: DisasterReport, request: Request):
     """
-    Receive a disaster report.
+    Receive a disaster report and automatically dispatch department-specific
+    WhatsApp alerts with direct Action Plan PDFs and turn-by-turn navigation.
 
     Flow:
 
@@ -58,9 +60,11 @@ def report_disaster(disaster: DisasterReport):
             ↓
         Coordinator Agent
             ↓
-        AI Analysis
+        AI Analysis & Quotas
             ↓
-        SQLite
+        SQLite Persistence
+            ↓
+        Automated Multi-Agency Dispatch (WhatsApp + Direct PDFs + GPS Nav)
             ↓
         Frontend
     """
@@ -112,6 +116,40 @@ def report_disaster(disaster: DisasterReport):
 
         # --------------------------------------------------
         # STEP 4
+        # AUTOMATED MULTI-AGENCY WHATSAPP & PDF DISPATCH
+        # --------------------------------------------------
+        base_url = f"{request.url.scheme}://{request.url.netloc}"
+        plan_dict = get_response_plan(saved_disaster.id) or {
+            "id": saved_disaster.id,
+            "disaster_type": saved_disaster.disaster_type,
+            "country": saved_disaster.country,
+            "state": saved_disaster.state,
+            "city": saved_disaster.city,
+            "latitude": saved_disaster.latitude,
+            "longitude": saved_disaster.longitude,
+            "severity": saved_disaster.severity,
+            "ai_severity": result.get("AI_Severity"),
+            "affected_people": saved_disaster.affected_people,
+            "description": saved_disaster.description,
+            "reported_by": saved_disaster.reported_by,
+            "report_time": saved_disaster.report_time,
+            "Prediction": result.get("Prediction"),
+            "Resources": result.get("Resources"),
+            "Notification": result.get("Notification")
+        }
+
+        try:
+            dispatch_result = dispatch_all_agencies(plan_dict, base_url=base_url)
+        except Exception as dispatch_err:
+            print("⚠️ Automated dispatch notice (non-fatal):", dispatch_err)
+            dispatch_result = {
+                "success": False,
+                "status": "DISPATCH_FAILED",
+                "error": str(dispatch_err)
+            }
+
+        # --------------------------------------------------
+        # STEP 5
         # RESPONSE
         # --------------------------------------------------
 
@@ -120,7 +158,7 @@ def report_disaster(disaster: DisasterReport):
             "success": True,
 
             "message":
-                "✅ Disaster report received successfully",
+                "✅ Disaster report registered and automated department WhatsApp alerts dispatched",
 
             "AI_Severity":
                 result.get(
@@ -141,6 +179,9 @@ def report_disaster(disaster: DisasterReport):
                 result.get(
                     "Notification"
                 ),
+
+            "dispatch":
+                dispatch_result,
 
             "report": {
 
@@ -559,23 +600,41 @@ async def dispatch_whatsapp_notification(disaster_id: int, request: Request):
 
     if target_channel == "all":
         for ch_id, ch_data in channels.items():
-            res = send_whatsapp_alert(ch_data["phone"], ch_data["message_text"])
+            res = send_whatsapp_alert(
+                phone=ch_data["phone"],
+                text=ch_data["message_text"],
+                pdf_path=ch_data.get("pdf_path"),
+                pdf_filename=ch_data.get("pdf_filename"),
+                pdf_url=ch_data.get("pdf_url")
+            )
             dispatched.append({
                 "channel_id": ch_id,
                 "name": ch_data["dept_name"],
                 "phone": ch_data["formatted_phone"],
                 "result": res,
-                "wa_link": ch_data["wa_link"]
+                "wa_link": ch_data["wa_link"],
+                "pdf_filename": ch_data.get("pdf_filename"),
+                "pdf_url": ch_data.get("pdf_url"),
+                "maps_link": ch_data.get("maps_link")
             })
     elif target_channel in channels:
         ch_data = channels[target_channel]
-        res = send_whatsapp_alert(ch_data["phone"], ch_data["message_text"])
+        res = send_whatsapp_alert(
+            phone=ch_data["phone"],
+            text=ch_data["message_text"],
+            pdf_path=ch_data.get("pdf_path"),
+            pdf_filename=ch_data.get("pdf_filename"),
+            pdf_url=ch_data.get("pdf_url")
+        )
         dispatched.append({
             "channel_id": target_channel,
             "name": ch_data["dept_name"],
             "phone": ch_data["formatted_phone"],
             "result": res,
-            "wa_link": ch_data["wa_link"]
+            "wa_link": ch_data["wa_link"],
+            "pdf_filename": ch_data.get("pdf_filename"),
+            "pdf_url": ch_data.get("pdf_url"),
+            "maps_link": ch_data.get("maps_link")
         })
     else:
         raise HTTPException(

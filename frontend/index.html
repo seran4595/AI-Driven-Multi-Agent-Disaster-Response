@@ -23,7 +23,7 @@
     <!-- MAIN CSS -->
     <link
         rel="stylesheet"
-        href="/static/css/style.css?v=8.0"
+        href="/static/css/style.css?v=12.0"
     >
 
     <!-- LEAFLET CSS -->
@@ -125,6 +125,18 @@
         >
             <span>🚨</span>
             Response Plans
+        </button>
+
+
+        <button
+            class="nav-item"
+            id="sidebarWhatsAppBtn"
+            type="button"
+            onclick="openContactsDirectoryModal()"
+            title="Open Emergency Agency WhatsApp Directory & Settings"
+        >
+            <span>📱</span>
+            WhatsApp Hub
         </button>
 
     </nav>
@@ -1322,7 +1334,7 @@
 <!-- =====================================================
      WHATSAPP AGENCY CONTACTS DIRECTORY MODAL
 ===================================================== -->
-<div class="modal" id="contactsModal">
+<div class="modal-overlay" id="contactsModal">
     <div class="modal-card modal-lg">
         <div class="modal-header">
             <div>
@@ -1343,7 +1355,7 @@
 <!-- =====================================================
      WHATSAPP MESSAGE PREVIEW MODAL
 ===================================================== -->
-<div class="modal" id="whatsappPreviewModal">
+<div class="modal-overlay" id="whatsappPreviewModal">
     <div class="modal-card">
         <div class="modal-header">
             <div>
@@ -1376,7 +1388,7 @@
 ===================================================== -->
 
 <script
-    src="/static/js/app.js?v=8.0"
+    src="/static/js/app.js?v=12.0"
 ></script>
 
 

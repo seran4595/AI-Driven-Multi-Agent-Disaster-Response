@@ -37,6 +37,7 @@ ensure_response_plan_columns()
 # ==========================================================
 
 app.include_router(router)
+app.include_router(router, prefix="/api")
 
 
 @app.get("/health")
