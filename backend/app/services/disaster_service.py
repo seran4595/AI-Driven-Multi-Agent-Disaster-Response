@@ -617,3 +617,35 @@ def get_response_plan(disaster_id):
         return _response_plan_dict(disaster)
     finally:
         db.close()
+
+
+def delete_disaster(disaster_id: int):
+    """Delete a single disaster report and its response plan."""
+    db = SessionLocal()
+    try:
+        disaster = db.query(Disaster).filter(Disaster.id == disaster_id).first()
+        if not disaster:
+            return False
+        db.delete(disaster)
+        db.commit()
+        return True
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def clear_all_disasters():
+    """Remove all disaster reports from the database for a clean empty slate."""
+    db = SessionLocal()
+    try:
+        deleted = db.query(Disaster).delete()
+        db.commit()
+        return {"deleted": deleted}
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+

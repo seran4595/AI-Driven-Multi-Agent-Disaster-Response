@@ -13,8 +13,11 @@ from backend.app.services.disaster_service import (
     get_dashboard_summary,
     get_analytics,
     get_response_plans,
-    get_response_plan
+    get_response_plan,
+    delete_disaster,
+    clear_all_disasters
 )
+
 
 from backend.app.agents.coordinator import process_disaster
 
@@ -210,12 +213,57 @@ def get_disasters():
         )
 
         raise HTTPException(
-
             status_code=500,
-
-            detail=
-                "Unable to retrieve disaster reports."
+            detail="Unable to retrieve disaster reports."
         )
+
+
+# ==========================================================
+# DELETE DISASTER / CLEAR ALL
+# ==========================================================
+
+@router.delete("/disasters/{disaster_id}")
+def delete_single_disaster(disaster_id: int):
+    """Delete a single disaster report and its AI response plan."""
+    try:
+        success = delete_disaster(disaster_id)
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Disaster report #{disaster_id} not found."
+            )
+        return {
+            "success": True,
+            "message": f"Disaster report #{disaster_id} deleted successfully."
+        }
+    except HTTPException:
+        raise
+    except Exception as error:
+        print("❌ ERROR DELETE /disasters/{id}:", error)
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to delete disaster report."
+        )
+
+
+@router.post("/disasters/clear")
+@router.delete("/disasters")
+def clear_disasters():
+    """Clear all disaster reports to start with a fresh empty database."""
+    try:
+        result = clear_all_disasters()
+        return {
+            "success": True,
+            "message": "All disaster reports cleared successfully.",
+            "deleted": result.get("deleted", 0)
+        }
+    except Exception as error:
+        print("❌ ERROR /disasters/clear:", error)
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to clear disaster reports."
+        )
+
 
 
 # ==========================================================

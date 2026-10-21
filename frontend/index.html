@@ -15,16 +15,18 @@
     </title>
 
 
-    <!-- MAIN CSS -->
+    <!-- GOOGLE FONTS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- MAIN CSS -->
     <link
         rel="stylesheet"
-        href="/static/css/style.css?v=4.0"
+        href="/static/css/style.css?v=8.0"
     >
 
-
     <!-- LEAFLET CSS -->
-
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -45,22 +47,38 @@
     <div class="brand">
 
         <div class="brand-icon">
-            🚨
+            <svg class="brand-logo-svg" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Tactical Shield Body -->
+                <rect x="3" y="3" width="38" height="38" rx="10" stroke="rgba(59, 130, 246, 0.45)" stroke-width="1.5" fill="rgba(15, 23, 42, 0.95)"/>
+                <!-- Radar Sweep Grid -->
+                <circle cx="22" cy="22" r="14" stroke="rgba(148, 163, 184, 0.2)" stroke-width="1" stroke-dasharray="2 2"/>
+                <circle cx="22" cy="22" r="9" stroke="#3b82f6" stroke-width="1.5" fill="rgba(37, 99, 235, 0.12)"/>
+                <!-- Precision Crosshair Reticle -->
+                <line x1="22" y1="5" x2="22" y2="9" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="22" y1="35" x2="22" y2="39" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="5" y1="22" x2="9" y2="22" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="35" y1="22" x2="39" y2="22" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"/>
+                <!-- Emergency Beacon Core -->
+                <circle cx="22" cy="22" r="4.2" fill="#ef4444"/>
+                <circle cx="22" cy="22" r="6.8" stroke="#ef4444" stroke-width="1" opacity="0.65"/>
+            </svg>
         </div>
 
-        <div>
+        <div class="brand-text-block">
 
-            <h1>
-                DISASTER AI
-            </h1>
+            <div class="brand-title-row">
+                <h1>DISASTER AI</h1>
+                <span class="brand-country-badge">IND</span>
+            </div>
 
-            <span>
-                COMMAND CENTER
+            <span class="brand-subtitle">
+                CRISIS COMMAND CENTER
             </span>
 
         </div>
 
     </div>
+
 
 
     <nav class="navigation">
@@ -583,6 +601,14 @@
                     0 reports
                 </span>
 
+                <button
+                    type="button"
+                    class="clear-db-btn"
+                    id="clearAllBtn"
+                    title="Empty all incident reports to start with a blank database"
+                >
+                    🗑️ Clear All
+                </button>
 
                 <button
                     class="small-report-btn"
@@ -604,9 +630,9 @@
 
                     <tr>
 
-                        <th>TYPE</th>
+                        <th>INCIDENT TYPE</th>
 
-                        <th>LOCATION</th>
+                        <th>LOCATION (INDIA)</th>
 
                         <th>SEVERITY</th>
 
@@ -614,13 +640,14 @@
 
                         <th>REPORTED BY</th>
 
-                        <th>TIME</th>
+                        <th>RECORDED TIME</th>
 
-                        <th>PLAN</th>
+                        <th>ACTIONS</th>
 
                     </tr>
 
                 </thead>
+
 
 
                 <tbody id="reportsTable">
@@ -677,6 +704,30 @@
                 0 plans
             </span>
 
+        </div>
+
+        <!-- RESPONSE PLAN FILTERS -->
+        <div class="response-plan-toolbar">
+            <div class="plan-filter-chips" id="planFilterChips">
+                <button type="button" class="filter-chip active" data-category="all"><span>🌐</span> All Plans</button>
+                <button type="button" class="filter-chip" data-category="water"><span>🌊</span> Floods &amp; Marine</button>
+                <button type="button" class="filter-chip" data-category="geological"><span>🌋</span> Earthquakes &amp; Slides</button>
+                <button type="button" class="filter-chip" data-category="fire"><span>🔥</span> Wildfires &amp; Fire</button>
+                <button type="button" class="filter-chip" data-category="storm"><span>🌀</span> Storms &amp; Cyclones</button>
+                <button type="button" class="filter-chip" data-category="hazmat"><span>☣️</span> Hazmat &amp; Chemical</button>
+                <button type="button" class="filter-chip" data-category="structural"><span>🏚️</span> Structural &amp; Transit</button>
+                <button type="button" class="filter-chip" data-category="climate"><span>☀️</span> Climate &amp; Bio</button>
+            </div>
+
+            <div class="plan-search-wrapper">
+                <input
+                    type="text"
+                    id="planSearchInput"
+                    class="plan-search-input"
+                    placeholder="🔎 Filter plans by city, disaster type, priority..."
+                    autocomplete="off"
+                >
+            </div>
         </div>
 
         <div
@@ -907,7 +958,7 @@
                         <input
                             id="locationSearch"
                             type="text"
-                            placeholder="🔎 Search city, area or landmark..."
+                            placeholder="🔎 Search Indian city, district or landmark (e.g. Mumbai, Chennai, Wayanad)..."
                             autocomplete="off"
                         >
 
@@ -1181,7 +1232,7 @@
 
 
 <!-- =====================================================
-     AI RESULT MODAL
+     TACTICAL RESPONSE PLAN / AI RESULT MODAL
 ===================================================== -->
 
 <div
@@ -1189,24 +1240,30 @@
     id="resultModal"
 >
 
-    <div class="result-modal">
+    <div class="result-modal tactical-modal">
 
+        <div class="modal-header tactical-modal-header">
+            <div>
+                <span class="panel-kicker">
+                    MISSION TACTICAL BRIEF
+                </span>
+                <h3 id="resultModalTitle">
+                    AI Response Plan &amp; Intelligence
+                </h3>
+                <p id="resultModalSubtitle">
+                    Multi-agent coordinated disaster mitigation strategy
+                </p>
+            </div>
 
-        <div class="result-icon">
-            ✓
+            <button
+                class="close-btn"
+                id="closeResultBtnTop"
+                type="button"
+                title="Close briefing"
+            >
+                ×
+            </button>
         </div>
-
-
-        <h3>
-            Disaster Report Processed
-        </h3>
-
-
-        <p>
-            The Coordinator Agent successfully
-            processed the incident.
-        </p>
-
 
         <div
             class="ai-result-grid"
@@ -1214,13 +1271,32 @@
         >
         </div>
 
+        <div class="modal-actions tactical-modal-actions">
+            <button
+                class="tactical-action-btn copy-btn"
+                id="copyAlertBtn"
+                type="button"
+            >
+                📋 Copy Emergency Alert
+            </button>
 
-        <button
-            class="submit-report-btn"
-            id="closeResultBtn"
-        >
-            Continue to Dashboard
-        </button>
+            <button
+                class="tactical-action-btn print-btn"
+                id="printPlanBtn"
+                type="button"
+                title="Print official tactical plan for this disaster only"
+            >
+                🖨️ Print Disaster Plan
+            </button>
+
+            <button
+                class="submit-report-btn close-result-btn"
+                id="closeResultBtn"
+                type="button"
+            >
+                Close Briefing
+            </button>
+        </div>
 
     </div>
 
@@ -1241,7 +1317,7 @@
 ===================================================== -->
 
 <script
-    src="/static/js/app.js?v=4.0"
+    src="/static/js/app.js?v=8.0"
 ></script>
 
 
