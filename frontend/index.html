@@ -1369,11 +1369,62 @@
             <pre class="alert-message-terminal" id="waPreviewText" style="white-space: pre-wrap; font-family: monospace;"></pre>
         </div>
         <div class="modal-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="tactical-action-btn" id="waPreviewSharePdfBtn" type="button" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;">📤 Send Direct PDF to WhatsApp</button>
             <button class="tactical-action-btn" id="waPreviewOpenBtn" type="button" style="background: #25D366; color: #fff;">💬 Open WhatsApp Web (With Emojis)</button>
             <button class="tactical-action-btn" id="waPreviewOpenAppBtn" type="button" style="background: #128C7E; color: #fff;">📱 Open App / Mobile</button>
             <button class="tactical-action-btn" id="waPreviewPdfBtn" type="button" style="background: #3b82f6; color: #fff;">📄 Download Direct PDF</button>
             <button class="tactical-action-btn copy-btn" id="waPreviewCopyBtn" type="button">📋 Copy Message</button>
             <button class="submit-report-btn close-result-btn" id="closeWaPreviewBtn" type="button">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- =====================================================
+     DIRECT PDF DISPATCH GUIDE MODAL
+===================================================== -->
+<div class="modal-overlay" id="directPdfGuideModal">
+    <div class="modal-card" style="max-width: 580px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.12));">
+            <div>
+                <h3 style="color: #34d399; font-size: 1.15rem;">📄 Direct PDF File Ready for WhatsApp!</h3>
+                <p id="guideTargetDept" style="color: #94a3b8; font-size: 0.85rem; margin-top: 2px;"></p>
+            </div>
+            <button class="close-btn" id="closeGuideModalBtnTop" type="button">×</button>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 2rem;">📥</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 1rem; display: block;" id="guidePdfFilename">Disaster_Action_Plan.pdf</strong>
+                        <span style="color: #34d399; font-size: 0.82rem;">Downloaded directly to your system &amp; complete order with 100% emojis copied to clipboard!</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 0.88rem; color: #cbd5e1;">
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <span style="background: #2563eb; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; font-size: 0.8rem;">1</span>
+                    <div>
+                        <strong>Send Actual PDF File:</strong> In the WhatsApp Web window that just opened, simply <strong>drag and drop</strong> the downloaded PDF into the chat box, or click <strong>📎 &gt; Document</strong> to select it.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <span style="background: #2563eb; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; font-size: 0.8rem;">2</span>
+                    <div>
+                        <strong>100% Emojis Preserved:</strong> The emergency order is pre-typed into the WhatsApp input box. If ever needed, press <strong>Ctrl + V</strong> to paste the complete text from your clipboard.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <span style="background: #10b981; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; font-size: 0.8rem;">✓</span>
+                    <div>
+                        <strong>Direct PDF Viewer:</strong> When the responder clicks the PDF in WhatsApp on their phone or laptop, it <strong>opens directly inside their native PDF viewer</strong> without any broken localhost links!
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-actions" style="padding: 14px 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: flex-end;">
+            <button class="submit-report-btn" id="closeGuideModalBtn" type="button" style="background: #10b981; color: #fff; padding: 8px 20px;">Got It! Proceed to WhatsApp</button>
         </div>
     </div>
 </div>
@@ -1390,7 +1441,7 @@
 ===================================================== -->
 
 <script
-    src="/static/js/app.js?v=14.0"
+    src="/static/js/app.js?v=15.0"
 ></script>
 
 

@@ -29,7 +29,9 @@ from backend.app.services.whatsapp_service import (
     prepare_all_notifications,
     send_whatsapp_alert,
     build_department_message,
-    dispatch_all_agencies
+    dispatch_all_agencies,
+    get_effective_base_url,
+    get_server_lan_ip
 )
 
 from backend.app.agents.coordinator import process_disaster
@@ -118,7 +120,7 @@ def report_disaster(disaster: DisasterReport, request: Request):
         # STEP 4
         # AUTOMATED MULTI-AGENCY WHATSAPP & PDF DISPATCH
         # --------------------------------------------------
-        base_url = f"{request.url.scheme}://{request.url.netloc}"
+        base_url = get_effective_base_url(f"{request.url.scheme}://{request.url.netloc}")
         plan_dict = get_response_plan(saved_disaster.id) or {
             "id": saved_disaster.id,
             "disaster_type": saved_disaster.disaster_type,
@@ -433,17 +435,15 @@ def analytics():
 @router.get("/api-status")
 def api_status():
     """
-    Check Disaster API status.
+    Check Disaster API status and return network LAN IP.
     """
-
+    lan_ip = get_server_lan_ip()
     return {
-
         "success": True,
-
         "status": "online",
-
-        "service":
-            "Disaster AI API"
+        "service": "Disaster AI API",
+        "lan_ip": lan_ip,
+        "effective_base_url": get_effective_base_url()
     }
 
 
@@ -564,7 +564,7 @@ def get_disaster_notifications(disaster_id: int, request: Request):
             detail=f"Disaster incident #{disaster_id} response plan not found."
         )
 
-    base_url = f"{request.url.scheme}://{request.url.netloc}"
+    base_url = get_effective_base_url(f"{request.url.scheme}://{request.url.netloc}")
     suite = prepare_all_notifications(plan, base_url)
     return {
         "success": True,
@@ -592,7 +592,7 @@ async def dispatch_whatsapp_notification(disaster_id: int, request: Request):
         body = {}
 
     target_channel = body.get("channel", "all").lower().strip()
-    base_url = f"{request.url.scheme}://{request.url.netloc}"
+    base_url = get_effective_base_url(f"{request.url.scheme}://{request.url.netloc}")
     suite = prepare_all_notifications(plan, base_url)
     channels = suite.get("channels", {})
 

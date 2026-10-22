@@ -526,7 +526,20 @@ function formatCompact(num) {
 // DOM READY
 // =====================================================
 
+function fetchServerLanIp() {
+    fetch("/api-status")
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.effective_base_url) {
+                window.systemLanBaseUrl = data.effective_base_url;
+                console.log("🌐 System LAN Base URL active:", window.systemLanBaseUrl);
+            }
+        })
+        .catch(() => {});
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+    fetchServerLanIp();
     initializeMap();
     setupNavigation();
     setupReportModal();
@@ -3802,7 +3815,8 @@ window.currentAgencyMessages = {};
 
 function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, city, state, country, resources, prediction, alertMessage, latitude, longitude, isSavedPlan = false) {
     const locStr = `${city || ''}, ${state || ''}`.replace(/^,\s*|,\s*$/g, '') || "Emergency Coordinates";
-    const baseOrigin = window.location.origin;
+    const baseOrigin = window.systemLanBaseUrl || (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' ? 'http://10.140.130.10:8000' : window.location.origin);
+    window.currentPreviewDisasterId = id;
 
     const agencies = [
         {
@@ -3901,13 +3915,18 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         "✅ *Authorized by AI Multi-Agent Coordinator*",
         "National Emergency Operations Center | Operational 24x7"
     ].join("\n");
-    const masterWaUrl = `https://wa.me/917397071819?text=${encodeURIComponent(masterMsg)}`;
+    const masterWaWeb = `https://web.whatsapp.com/send?phone=917397071819&text=${encodeURIComponent(masterMsg)}`;
+    const masterWaApp = `https://api.whatsapp.com/send?phone=917397071819&text=${encodeURIComponent(masterMsg)}`;
 
     window.currentAgencyMessages["central_command"] = {
+        disasterId: id,
+        channelId: "central_command",
         title: "Central Command / Master EOC",
         phone: "+91 73970 71819",
+        rawPhone: "917397071819",
         text: masterMsg,
-        waUrl: masterWaUrl,
+        waUrl: masterWaWeb,
+        waAppUrl: masterWaApp,
         pdfUrl: masterPdfUrl,
         pdfName: masterPdfName,
         mapsUrl: turnByTurnNav
@@ -3937,13 +3956,18 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
             "✅ *Authorized by National Emergency Operations Center*",
             "Official Emergency Directive | AI Multi-Agent Coordinator"
         ].join("\n");
-        const waLink = `https://wa.me/${agency.phone}?text=${encodeURIComponent(deptMsg)}`;
+        const deptWaWeb = `https://web.whatsapp.com/send?phone=${agency.phone}&text=${encodeURIComponent(deptMsg)}`;
+        const deptWaApp = `https://api.whatsapp.com/send?phone=${agency.phone}&text=${encodeURIComponent(deptMsg)}`;
 
         window.currentAgencyMessages[agency.id] = {
+            disasterId: id,
+            channelId: agency.id,
             title: agency.name,
             phone: agency.displayPhone,
+            rawPhone: agency.phone,
             text: deptMsg,
-            waUrl: waLink,
+            waUrl: deptWaWeb,
+            waAppUrl: deptWaApp,
             pdfUrl: deptPdfUrl,
             pdfName: deptPdfName,
             mapsUrl: turnByTurnNav
@@ -4006,14 +4030,14 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
                         </div>
                     </div>
                     <div class="wa-master-actions">
-                        <a href="${masterWaUrl}" target="_blank" class="wa-btn wa-btn-primary" title="Open WhatsApp with Master Plan &amp; direct attached PDF">
-                            🚀 Send Master Plan via WhatsApp
-                        </a>
+                        <button type="button" class="wa-btn wa-btn-primary" onclick="sendWhatsAppWithDirectPDF('central_command', ${id})" title="Send Master Plan &amp; Direct PDF to WhatsApp">
+                            🚀 Send Master Plan &amp; Direct PDF
+                        </button>
                         <a href="${turnByTurnNav}" target="_blank" class="wa-btn wa-btn-outline" style="border-color: #38bdf8; color: #38bdf8;" title="Initiate Turn-by-Turn Navigation directly in Google Maps">
                             🧭 Navigate to Scene
                         </a>
                         <button type="button" class="wa-btn wa-btn-pdf" onclick="downloadDisasterPDF(${id})" title="Download official Master Incident Action Plan PDF">
-                            📎 Direct Master IAP PDF
+                            📄 Direct Master IAP PDF
                         </button>
                         <button type="button" class="wa-btn wa-btn-outline" onclick="previewDeptWhatsApp('central_command')">
                             👁️ Preview Message
@@ -4028,8 +4052,6 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
             <!-- 7 SPECIALIZED DEPARTMENT CHANNELS -->
             <div class="wa-agencies-grid">
                 ${agencies.map(agency => {
-                    const waLink = window.currentAgencyMessages[agency.id]?.waUrl || `https://wa.me/${agency.phone}`;
-
                     return `
                         <div class="wa-agency-card" style="border-left: 3px solid ${agency.color};">
                             <div class="wa-agency-top">
@@ -4047,14 +4069,14 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
                             </div>
 
                             <div class="wa-agency-actions">
-                                <a href="${waLink}" target="_blank" class="wa-btn wa-btn-primary wa-btn-sm" title="Send targeted WhatsApp order with direct attached PDF">
-                                    💬 WhatsApp
-                                </a>
+                                <button type="button" class="wa-btn wa-btn-primary wa-btn-sm" onclick="sendWhatsAppWithDirectPDF('${agency.id}', ${id})" title="Send ${agency.name} Action Order with Direct PDF">
+                                    💬 WhatsApp &amp; Direct PDF
+                                </button>
                                 <a href="${turnByTurnNav}" target="_blank" class="wa-btn wa-btn-outline wa-btn-sm" style="border-color: #38bdf8; color: #38bdf8;" title="Turn-by-turn Navigation in Google Maps">
                                     🧭 Navigate
                                 </a>
                                 <button type="button" class="wa-btn wa-btn-pdf wa-btn-sm" onclick="downloadDisasterPDF(${id}, '${agency.id}')" title="Download ${agency.name} Action Order PDF">
-                                    📎 Direct PDF
+                                    📄 Direct PDF
                                 </button>
                                 <button type="button" class="wa-btn wa-btn-outline wa-btn-sm" onclick="previewDeptWhatsApp('${agency.id}')" title="Preview formatted message text">
                                     👁️ Preview
@@ -4072,10 +4094,13 @@ function previewDeptWhatsApp(channelId) {
     const item = window.currentAgencyMessages?.[channelId];
     if (!item) return;
 
+    window.activePreviewChannel = channelId;
+
     const modal = document.getElementById("whatsappPreviewModal");
     const titleEl = document.getElementById("waPreviewTitle");
     const metaEl = document.getElementById("waPreviewMeta");
     const textEl = document.getElementById("waPreviewText");
+    const sharePdfBtn = document.getElementById("waPreviewSharePdfBtn");
     const openBtn = document.getElementById("waPreviewOpenBtn");
     const openAppBtn = document.getElementById("waPreviewOpenAppBtn");
     const pdfBtn = document.getElementById("waPreviewPdfBtn");
@@ -4094,12 +4119,16 @@ function previewDeptWhatsApp(channelId) {
     }
     if (textEl) textEl.textContent = item.text;
 
+    if (sharePdfBtn) {
+        sharePdfBtn.onclick = () => sendWhatsAppWithDirectPDF(channelId, item.disasterId || window.currentPreviewDisasterId);
+    }
+
     if (openBtn) {
         openBtn.onclick = () => window.open(item.waUrl, "_blank");
     }
 
     if (openAppBtn) {
-        const cleanDigits = (item.phone || "").replace(/\D/g, "");
+        const cleanDigits = (item.rawPhone || item.phone || "").replace(/\D/g, "");
         const appUrl = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodeURIComponent(item.text)}`;
         openAppBtn.onclick = () => window.open(appUrl, "_blank");
     }
@@ -4116,12 +4145,88 @@ function previewDeptWhatsApp(channelId) {
     if (copyBtn) {
         copyBtn.onclick = () => {
             navigator.clipboard.writeText(item.text).then(() => {
-                showToastNotification("✅ WhatsApp Message copied to clipboard!");
+                showToastNotification("✅ WhatsApp Message with 100% emojis copied to clipboard!");
             }).catch(() => {
                 copyFallback(item.text);
             });
         };
     }
+
+    const closeHandler = () => modal.classList.remove("show");
+    if (closeBtnTop) closeBtnTop.onclick = closeHandler;
+    if (closeBtn) closeBtn.onclick = closeHandler;
+
+    modal.classList.add("show");
+}
+
+async function sendWhatsAppWithDirectPDF(channelId, disasterId) {
+    const item = window.currentAgencyMessages?.[channelId];
+    if (!item) return;
+
+    const pdfUrl = item.pdfUrl || `/api/disasters/${disasterId}/pdf${channelId === 'central_command' ? '' : '/' + channelId}`;
+    const pdfFilename = item.pdfName || `Disaster_${disasterId}_Action_Plan.pdf`;
+    const cleanPhone = (item.rawPhone || item.phone || "").replace(/\D/g, "");
+    const messageText = item.text || "";
+
+    // 1. Try Native Web Share API with actual File attachment (Android, iOS, Windows 11)
+    if (navigator.share && navigator.canShare) {
+        try {
+            showToastNotification("⏳ Preparing Direct PDF for WhatsApp dispatch...");
+            const resp = await fetch(pdfUrl);
+            if (resp.ok) {
+                const blob = await resp.blob();
+                const file = new File([blob], pdfFilename, { type: "application/pdf" });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: item.title,
+                        text: messageText,
+                        files: [file]
+                    });
+                    showToastNotification("✅ Direct PDF document sent to WhatsApp!");
+                    return;
+                }
+            }
+        } catch (shareErr) {
+            console.log("Web Share fallback:", shareErr);
+        }
+    }
+
+    // 2. Direct Download of the actual PDF file
+    try {
+        const dlLink = document.createElement("a");
+        dlLink.href = pdfUrl;
+        dlLink.download = pdfFilename;
+        document.body.appendChild(dlLink);
+        dlLink.click();
+        document.body.removeChild(dlLink);
+    } catch (dlErr) {
+        console.warn("Direct PDF download fallback error:", dlErr);
+    }
+
+    // 3. Copy message text with 100% untouched emojis to clipboard
+    try {
+        await navigator.clipboard.writeText(messageText);
+    } catch (_) {}
+
+    // 4. Open WhatsApp Web directly (avoiding wa.me redirect emoji corruption)
+    const directWaUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
+    window.open(directWaUrl, "_blank");
+
+    // 5. Open Guide Modal explaining how the direct PDF was saved and ready to drag
+    openDirectPdfGuideModal(pdfFilename, item.title, item.phone || cleanPhone);
+}
+
+function openDirectPdfGuideModal(pdfFilename, title, phone) {
+    const modal = document.getElementById("directPdfGuideModal");
+    if (!modal) return;
+
+    const nameEl = document.getElementById("guidePdfFilename");
+    const targetEl = document.getElementById("guideTargetDept");
+    const closeBtnTop = document.getElementById("closeGuideModalBtnTop");
+    const closeBtn = document.getElementById("closeGuideModalBtn");
+
+    if (nameEl) nameEl.textContent = pdfFilename;
+    if (targetEl) targetEl.textContent = `Target: ${title} (${phone})`;
 
     const closeHandler = () => modal.classList.remove("show");
     if (closeBtnTop) closeBtnTop.onclick = closeHandler;
@@ -4173,7 +4278,7 @@ async function broadcastWhatsAppToAll(disasterId) {
         setTimeout(() => {
             if (confirm("✅ Broadcast prepared for all 8 departments!\n\nWould you like to open the Central Command Master WhatsApp chat now?")) {
                 const masterWaUrl = window.currentAgencyMessages?.["central_command"]?.waUrl || 
-                    `https://wa.me/917397071819`;
+                    `https://web.whatsapp.com/send?phone=917397071819`;
                 window.open(masterWaUrl, "_blank");
             }
         }, 300);
@@ -4182,7 +4287,7 @@ async function broadcastWhatsAppToAll(disasterId) {
         console.error("Broadcast error:", e);
         // Fallback: open Central Command WhatsApp directly
         const masterWaUrl = window.currentAgencyMessages?.["central_command"]?.waUrl || 
-            `https://wa.me/917397071819`;
+            `https://web.whatsapp.com/send?phone=917397071819`;
         window.open(masterWaUrl, "_blank");
     }
 }

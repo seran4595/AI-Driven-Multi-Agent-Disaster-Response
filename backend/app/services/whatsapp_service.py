@@ -1,4 +1,5 @@
 import os
+import socket
 import urllib.parse
 import requests
 from backend.app.config import get_all_contacts
@@ -6,6 +7,39 @@ from backend.app.services.pdf_service import (
     generate_master_disaster_pdf,
     generate_department_disaster_pdf
 )
+
+def get_server_lan_ip() -> str:
+    """Detect machine's reachable LAN IP address so devices on Wi-Fi or mobile network can open links."""
+    override = os.getenv("PUBLIC_BASE_URL") or os.getenv("HOST_IP")
+    if override:
+        return override.strip()
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
+def get_effective_base_url(base_url: str = "") -> str:
+    """
+    Ensure the base URL uses a reachable LAN IP instead of 127.0.0.1 or localhost,
+    so that when department members click the PDF link on another device or phone,
+    it actually reaches this server and opens!
+    """
+    if os.getenv("PUBLIC_BASE_URL"):
+        return os.getenv("PUBLIC_BASE_URL").rstrip("/")
+
+    lan_ip = get_server_lan_ip()
+    port = os.getenv("PORT", "8000")
+
+    if not base_url or "127.0.0.1" in base_url or "localhost" in base_url:
+        return f"http://{lan_ip}:{port}"
+    return base_url.rstrip("/")
+
 
 # Meta WhatsApp Cloud API config (optional environment variables)
 META_WA_TOKEN = os.getenv("META_WA_TOKEN") or os.getenv("WHATSAPP_TOKEN")
@@ -100,7 +134,7 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
 
     # Automatically generate the official PDF Action Plan file directly
     pdf_path = None
-    effective_base = base_url.rstrip("/") if base_url else "http://127.0.0.1:8000"
+    effective_base = get_effective_base_url(base_url)
     if dept_id == "central_command":
         pdf_filename = f"Disaster_{disaster_id}_Master_IAP.pdf"
         pdf_url = f"{effective_base}/api/disasters/{disaster_id}/pdf"
@@ -448,7 +482,8 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
     encoded_text = urllib.parse.quote(message_text, safe="")
     wa_web_link = f"https://web.whatsapp.com/send?phone={phone}&text={encoded_text}"
     wa_app_link = f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
-    wa_link = f"https://wa.me/{phone}?text={encoded_text}"
+    # Use direct web link to prevent wa.me HTTP 302 redirect from corrupting UTF-8 emojis into replacement diamonds
+    wa_link = wa_web_link
 
     return {
         "dept_id": dept_id,
@@ -515,7 +550,8 @@ def send_whatsapp_alert(
     encoded = urllib.parse.quote(safe_text, safe="")
     wa_web_url = f"https://web.whatsapp.com/send?phone={clean_num}&text={encoded}"
     wa_mobile_url = f"https://api.whatsapp.com/send?phone={clean_num}&text={encoded}"
-    wa_direct_url = f"https://wa.me/{clean_num}?text={encoded}"
+    # Avoid wa.me redirect which corrupts emojis into \uFFFD
+    wa_direct_url = wa_web_url
     doc_name = pdf_filename or (os.path.basename(pdf_path) if pdf_path else "Disaster_Action_Plan.pdf")
 
     # 1. Try Meta WhatsApp Cloud API if configured
