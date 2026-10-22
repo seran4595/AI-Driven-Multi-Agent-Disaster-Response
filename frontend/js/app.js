@@ -3881,9 +3881,26 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         ? `https://www.google.com/maps/dir//${latitude.toFixed(6)},${longitude.toFixed(6)}`
         : `https://www.google.com/maps/dir//${encodeURIComponent(locStr)}`;
 
+    const divider = "----------------------------------------";
     const masterPdfUrl = `${baseOrigin}/api/disasters/${id}/pdf`;
     const masterPdfName = `Disaster_${id}_Master_IAP.pdf`;
-    const masterMsg = `🚨 *DISASTER COMMAND // MASTER INCIDENT ACTION PLAN (IAP)* 🚨\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📍 *Incident ID:* #${id} | *Type:* ${String(disasterType).toUpperCase()}\n⚠️ *Severity:* ${String(aiSeverity).toUpperCase()}\n🗺️ *Location:* ${locStr}\n👥 *Affected Population:* ${formatNumber(data.affected_people || 0)}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE):*\n${turnByTurnNav}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📎 *DIRECT ATTACHED PLAN:* [${masterPdfName}]\n━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ Authorized by AI Multi-Agent Coordinator`;
+    const masterMsg = [
+        "🚨 *DISASTER COMMAND // MASTER INCIDENT ACTION PLAN (IAP)* 🚨",
+        divider,
+        `📍 *Incident ID:* #${id} | *Type:* ${String(disasterType).toUpperCase()}`,
+        `⚠️ *Severity Assessment:* ${String(aiSeverity).toUpperCase()}`,
+        `🗺️ *Disaster Location:* ${locStr}`,
+        `👥 *Total Affected Population:* ${formatNumber(data.affected_people || 0)}`,
+        divider,
+        "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE):*",
+        `${turnByTurnNav}`,
+        divider,
+        "📄 *OFFICIAL MASTER INCIDENT ACTION PLAN (DIRECT PDF):*",
+        `${masterPdfUrl}`,
+        divider,
+        "✅ *Authorized by AI Multi-Agent Coordinator*",
+        "National Emergency Operations Center | Operational 24x7"
+    ].join("\n");
     const masterWaUrl = `https://wa.me/917397071819?text=${encodeURIComponent(masterMsg)}`;
 
     window.currentAgencyMessages["central_command"] = {
@@ -3899,7 +3916,27 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
     agencies.forEach(agency => {
         const deptPdfUrl = `${baseOrigin}/api/disasters/${id}/pdf/${agency.id}`;
         const deptPdfName = `Disaster_${id}_${agency.id.charAt(0).toUpperCase() + agency.id.slice(1)}_Order.pdf`;
-        const deptMsg = `🚨 *EMERGENCY ORDER: ${agency.name.toUpperCase()}* 🚨\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📍 *Incident ID:* #${id} (${disasterType})\n🗺️ *Location:* ${locStr}\n⚠️ *Severity:* ${aiSeverity}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE):*\n${turnByTurnNav}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📦 *RESOURCE MANDATE:*\n${agency.summary}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n⚡ *Directive:* ${agency.directive}\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📎 *DIRECT ATTACHED PLAN:* [${deptPdfName}]\n━━━━━━━━━━━━━━━━━━━━━━━━━\nOfficial Directive • AI Multi-Agent Coordinator`;
+        const deptMsg = [
+            `🚨 *EMERGENCY ORDER: ${agency.name.toUpperCase()}* 🚨`,
+            divider,
+            `📍 *Incident ID:* #${id} (${disasterType})`,
+            `🗺️ *Target Location:* ${locStr}`,
+            `⚠️ *Severity Level:* ${aiSeverity}`,
+            divider,
+            "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE):*",
+            `${turnByTurnNav}`,
+            divider,
+            "📦 *RESOURCE MANDATE:*",
+            `${agency.summary}`,
+            divider,
+            `⚡ *Directive:* ${agency.directive}`,
+            divider,
+            `📄 *OFFICIAL ${agency.name.toUpperCase()} ACTION ORDER (DIRECT PDF):*`,
+            `${deptPdfUrl}`,
+            divider,
+            "✅ *Authorized by National Emergency Operations Center*",
+            "Official Emergency Directive | AI Multi-Agent Coordinator"
+        ].join("\n");
         const waLink = `https://wa.me/${agency.phone}?text=${encodeURIComponent(deptMsg)}`;
 
         window.currentAgencyMessages[agency.id] = {
@@ -4040,6 +4077,8 @@ function previewDeptWhatsApp(channelId) {
     const metaEl = document.getElementById("waPreviewMeta");
     const textEl = document.getElementById("waPreviewText");
     const openBtn = document.getElementById("waPreviewOpenBtn");
+    const openAppBtn = document.getElementById("waPreviewOpenAppBtn");
+    const pdfBtn = document.getElementById("waPreviewPdfBtn");
     const copyBtn = document.getElementById("waPreviewCopyBtn");
     const closeBtnTop = document.getElementById("closeWaPreviewBtnTop");
     const closeBtn = document.getElementById("closeWaPreviewBtn");
@@ -4050,13 +4089,28 @@ function previewDeptWhatsApp(channelId) {
     if (metaEl) {
         metaEl.innerHTML = `
             <span>Recipient: <strong>${escapeHtml(item.phone)}</strong></span>
-            <span>PDF: <strong>${escapeHtml(item.pdfUrl ? 'Attached' : 'None')}</strong></span>
+            <span>Direct PDF: <strong>${item.pdfUrl ? `<a href="${item.pdfUrl}" target="_blank" style="color: #38bdf8; text-decoration: underline;">📄 Open ${escapeHtml(item.pdfName || 'Direct PDF')}</a>` : 'None'}</strong></span>
         `;
     }
     if (textEl) textEl.textContent = item.text;
 
     if (openBtn) {
         openBtn.onclick = () => window.open(item.waUrl, "_blank");
+    }
+
+    if (openAppBtn) {
+        const cleanDigits = (item.phone || "").replace(/\D/g, "");
+        const appUrl = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodeURIComponent(item.text)}`;
+        openAppBtn.onclick = () => window.open(appUrl, "_blank");
+    }
+
+    if (pdfBtn) {
+        if (item.pdfUrl) {
+            pdfBtn.style.display = "inline-flex";
+            pdfBtn.onclick = () => window.open(item.pdfUrl, "_blank");
+        } else {
+            pdfBtn.style.display = "none";
+        }
     }
 
     if (copyBtn) {

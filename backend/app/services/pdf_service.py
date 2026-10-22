@@ -30,7 +30,7 @@ import re
 
 def _format_val(val):
     if val is None or val == "":
-        return "—"
+        return "-"
     if isinstance(val, (int, float)):
         return f"{val:,}" if isinstance(val, int) else f"{val:.1f}"
     return str(val)
@@ -151,7 +151,7 @@ def generate_master_disaster_pdf(disaster_data: dict) -> str:
     ai_severity = str(disaster_data.get("ai_severity", severity)).upper()
     people = _format_val(disaster_data.get("affected_people", 0))
     location = f"{disaster_data.get('city', '')}, {disaster_data.get('state', '')}, {disaster_data.get('country', '')}".strip(', ')
-    coords = f"{disaster_data.get('latitude', '—')} N, {disaster_data.get('longitude', '—')} E"
+    coords = f"{disaster_data.get('latitude', 'N/A')} N, {disaster_data.get('longitude', 'N/A')} E"
     
     prediction = disaster_data.get("Prediction") or disaster_data.get("prediction") or {}
     priority = prediction.get("Priority", "HIGH")
@@ -278,7 +278,7 @@ def generate_department_disaster_pdf(disaster_data: dict, department_key: str) -
 
     # Title Banner
     story.append(Paragraph(agency_name, ParagraphStyle('AgencyTitle', parent=st["title"], textColor=colors.HexColor(color_hex))))
-    story.append(Paragraph(f"{directive_title} — INCIDENT #{disaster_id}", st["subtitle"]))
+    story.append(Paragraph(f"{directive_title} - INCIDENT #{disaster_id}", st["subtitle"]))
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor(color_hex), spaceAfter=10))
 
     # Incident Context
@@ -286,7 +286,7 @@ def generate_department_disaster_pdf(disaster_data: dict, department_key: str) -
     severity = str(disaster_data.get("severity", "Unknown")).upper()
     people = _format_val(disaster_data.get("affected_people", 0))
     location = f"{disaster_data.get('city', '')}, {disaster_data.get('state', '')}, {disaster_data.get('country', '')}".strip(', ')
-    coords = f"{disaster_data.get('latitude', '—')} N, {disaster_data.get('longitude', '—')} E"
+    coords = f"{disaster_data.get('latitude', 'N/A')} N, {disaster_data.get('longitude', 'N/A')} E"
 
     context_data = [
         [Paragraph("Target Incident:", st["cell_bold"]), Paragraph(f"#{disaster_id} ({disaster_type})", st["cell"]),

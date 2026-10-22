@@ -19,7 +19,7 @@ TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886"
 
 def _format_metric(val):
     if val is None or val == "":
-        return "—"
+        return "-"
     if isinstance(val, (int, float)):
         return f"{val:,}" if isinstance(val, int) else f"{val:.1f}"
     return str(val)
@@ -36,7 +36,7 @@ def _clean_phone(phone: str) -> str:
     return digits
 
 
-def _get_val(d: dict, *keys, default="—"):
+def _get_val(d: dict, *keys, default="-"):
     """Fetch value by trying multiple possible keys (supports CamelCase & snake_case)."""
     if not isinstance(d, dict):
         return default
@@ -100,36 +100,39 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
 
     # Automatically generate the official PDF Action Plan file directly
     pdf_path = None
+    effective_base = base_url.rstrip("/") if base_url else "http://127.0.0.1:8000"
     if dept_id == "central_command":
         pdf_filename = f"Disaster_{disaster_id}_Master_IAP.pdf"
-        pdf_url = f"{base_url}/api/disasters/{disaster_id}/pdf" if base_url else ""
+        pdf_url = f"{effective_base}/api/disasters/{disaster_id}/pdf"
         try:
             pdf_path = generate_master_disaster_pdf(disaster_data)
         except Exception:
             pass
     else:
         pdf_filename = f"Disaster_{disaster_id}_{dept_id.capitalize()}_Order.pdf"
-        pdf_url = f"{base_url}/api/disasters/{disaster_id}/pdf/{dept_id}" if base_url else ""
+        pdf_url = f"{effective_base}/api/disasters/{disaster_id}/pdf/{dept_id}"
         try:
             pdf_path = generate_department_disaster_pdf(disaster_data, dept_id)
         except Exception:
             pass
 
+    DIVIDER = "----------------------------------------"
+
     # 1. CENTRAL COMMAND / MASTER EOC (Phone: +91 7397071819)
     if dept_id == "central_command":
         lines = [
             "🚨 *DISASTER COMMAND // MASTER INCIDENT ACTION PLAN (IAP)* 🚨",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             f"📍 *Incident ID:* #{disaster_id} | *Hazard:* {disaster_type}",
             f"⚠️ *Severity Assessment:* {severity}",
             f"⚡ *Response Priority:* {priority}",
             f"🗺️ *Disaster Location:* {location}",
             f"👥 *Total Affected Population:* {affected}",
             f"🚪 *Evacuation Directive:* {evacuation}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE TO SCENE):*",
             f"{maps_link}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "📋 *COORDINATED 7-AGENCY RESOURCE ALLOCATION SUMMARY:*",
         ]
 
@@ -175,15 +178,16 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
             lines.append(f"🚚 *Transport Dept:* {buses} evacuation buses | {trucks} cargo supply trucks")
 
         lines.extend([
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🛡️ *OPERATIONAL COMMAND DIRECTIVE:*",
             "All agency heads maintain radio liaison with Master EOC.",
             "Establish secondary staging areas outside the primary impact hazard radius.",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            f"📎 *OFFICIAL ACTION PLAN:* [Direct Attached Document: {pdf_filename}]",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
+            "📄 *OFFICIAL MASTER INCIDENT ACTION PLAN (DIRECT PDF):*",
+            f"{pdf_url}",
+            DIVIDER,
             "✅ *Authorized by AI Multi-Agent Incident Commander*",
-            "National Emergency Operations Center • Operational 24x7"
+            "National Emergency Operations Center | Operational 24x7"
         ])
 
     # 2. FOOD DEPARTMENT (Phone: +91 8015808283)
@@ -191,34 +195,35 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
         food = resources.get("Food") or {}
         lines = [
             "🍲 *EMERGENCY ORDER: FOOD & CIVIL SUPPLIES DEPARTMENT* 🍲",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             f"📍 *Incident ID:* #{disaster_id} | *Hazard:* {disaster_type}",
             f"🗺️ *Target Location:* {location}",
             f"👥 *Affected Citizens to Sustain:* {affected}",
             f"⚠️ *Incident Severity Level:* {severity}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE TO SCENE):*",
             f"{maps_link}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "📦 *RESOURCE ALLOCATION QUOTA (OFFICIAL DIRECTIVE):*",
-            f"• *Meal Classification:* {_get_val(food, 'MealType', 'meal_type', default='Ready-To-Eat Emergency Packets')}",
-            f"• *Ration Frequency:* {_get_val(food, 'MealsPerDay', 'meals_per_day', default=3)} meals per day",
-            f"• *Total Food Packets Allocated:* {_format_metric(_get_val(food, 'FoodPackets', 'required_food_packets', default=0))} packets",
-            f"• *Dry Ration Family Packs:* {_format_metric(_get_val(food, 'DryRationKits', 'dry_ration_kits', default=0))} kits",
-            f"• *Infant and Baby Nutrition Kits:* {_format_metric(_get_val(food, 'BabyFoodKits', 'baby_food_kits', default=0))} kits",
-            f"• *Emergency Buffer Reserve:* {_format_metric(_get_val(food, 'EmergencyReserve', 'emergency_reserve_packets', default=0))} packets",
-            f"• *Authorized Distribution Counters:* {_get_val(food, 'DistributionCenters', 'distribution_centers', default=1)} centers",
-            f"• *Mandated Supply Operational Window:* {_get_val(food, 'SupplyDurationDays', 'supply_duration_days', default=3)} continuous days",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            f"- *Meal Classification:* {_get_val(food, 'MealType', 'meal_type', default='Ready-To-Eat Emergency Packets')}",
+            f"- *Ration Frequency:* {_get_val(food, 'MealsPerDay', 'meals_per_day', default=3)} meals per day",
+            f"- *Total Food Packets Allocated:* {_format_metric(_get_val(food, 'FoodPackets', 'required_food_packets', default=0))} packets",
+            f"- *Dry Ration Family Packs:* {_format_metric(_get_val(food, 'DryRationKits', 'dry_ration_kits', default=0))} kits",
+            f"- *Infant and Baby Nutrition Kits:* {_format_metric(_get_val(food, 'BabyFoodKits', 'baby_food_kits', default=0))} kits",
+            f"- *Emergency Buffer Reserve:* {_format_metric(_get_val(food, 'EmergencyReserve', 'emergency_reserve_packets', default=0))} packets",
+            f"- *Authorized Distribution Counters:* {_get_val(food, 'DistributionCenters', 'distribution_centers', default=1)} centers",
+            f"- *Mandated Supply Operational Window:* {_get_val(food, 'SupplyDurationDays', 'supply_duration_days', default=3)} continuous days",
+            DIVIDER,
             "⚡ *FIELD EXECUTION PROTOCOL:*",
             "1. Mobilize community kitchens in adjacent unaffected sectors.",
             "2. Dispatch food cargo fleet to authorized distribution hubs.",
             "3. Enforce priority queues for elderly, pregnant women, and children.",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            f"📎 *OFFICIAL ACTION PLAN:* [Direct Attached Document: {pdf_filename}]",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
+            "📄 *OFFICIAL FOOD DEPARTMENT ACTION ORDER (DIRECT PDF):*",
+            f"{pdf_url}",
+            DIVIDER,
             "✅ *Authorized by National Emergency Operations Center*",
-            "Food & Civil Supplies Disaster Cell • Immediate Deployment"
+            "Food & Civil Supplies Disaster Cell | Immediate Deployment"
         ]
 
     # 3. WATER DEPARTMENT (Phone: +91 8015808283)
@@ -226,33 +231,34 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
         water = resources.get("Water") or {}
         lines = [
             "💧 *EMERGENCY ORDER: WATER SUPPLY & SANITATION BOARD* 💧",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             f"📍 *Incident ID:* #{disaster_id} | *Hazard:* {disaster_type}",
             f"🗺️ *Target Location:* {location}",
             f"👥 *Affected Citizens to Supply:* {affected}",
             f"⚠️ *Incident Severity Level:* {severity}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE TO SCENE):*",
             f"{maps_link}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🚰 *RESOURCE ALLOCATION QUOTA (OFFICIAL DIRECTIVE):*",
-            f"• *Potable Water Requirement:* {_format_metric(_get_val(water, 'TotalWaterRequired_Liters', 'water_liters_per_day', default=0))} Liters per Day",
-            f"• *Packaged Drinking Water Packs:* {_format_metric(_get_val(water, 'BottledWaterPacks', 'water_bottles', default=0))} packs",
-            f"• *Heavy Water Tankers Deployed:* {_get_val(water, 'WaterTankers', 'water_tankers', default=0)} vehicle units",
-            f"• *Mobile Purification Plants:* {_get_val(water, 'PurificationUnits', 'purification_units', default=0)} filtration units",
-            f"• *Emergency Static Storage Tanks:* {_get_val(water, 'WaterStorageTanks', 'storage_tanks', default=0)} tanks",
-            f"• *Water Purification Chlorine Tablets:* {_format_metric(_get_val(water, 'ChlorineTablets', 'purification_tablets', default=0))} tablets",
-            f"• *Operation Window:* {_get_val(water, 'SupplyDurationDays', 'supply_duration_days', default=3)} continuous days",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            f"- *Potable Water Requirement:* {_format_metric(_get_val(water, 'TotalWaterRequired_Liters', 'water_liters_per_day', default=0))} Liters per Day",
+            f"- *Packaged Drinking Water Packs:* {_format_metric(_get_val(water, 'BottledWaterPacks', 'water_bottles', default=0))} packs",
+            f"- *Heavy Water Tankers Deployed:* {_get_val(water, 'WaterTankers', 'water_tankers', default=0)} vehicle units",
+            f"- *Mobile Purification Plants:* {_get_val(water, 'PurificationUnits', 'purification_units', default=0)} filtration units",
+            f"- *Emergency Static Storage Tanks:* {_get_val(water, 'WaterStorageTanks', 'storage_tanks', default=0)} tanks",
+            f"- *Water Purification Chlorine Tablets:* {_format_metric(_get_val(water, 'ChlorineTablets', 'purification_tablets', default=0))} tablets",
+            f"- *Operation Window:* {_get_val(water, 'SupplyDurationDays', 'supply_duration_days', default=3)} continuous days",
+            DIVIDER,
             "⚡ *FIELD EXECUTION PROTOCOL:*",
             "1. Position tankers at relief camps and high density civilian shelters.",
             "2. Start chlorination treatment and field testing of all water supplies.",
             "3. Prevent waterborne epidemics by sanitizing surrounding drain networks.",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            f"📎 *OFFICIAL ACTION PLAN:* [Direct Attached Document: {pdf_filename}]",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
+            "📄 *OFFICIAL WATER DEPARTMENT ACTION ORDER (DIRECT PDF):*",
+            f"{pdf_url}",
+            DIVIDER,
             "✅ *Authorized by National Emergency Operations Center*",
-            "Water Supply & Sanitation Emergency Desk • Immediate Deployment"
+            "Water Supply & Sanitation Emergency Desk | Immediate Deployment"
         ]
 
     # 4. SHELTER DEPARTMENT (Phone: +91 8015808283)
@@ -260,33 +266,34 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
         shelter = resources.get("Shelter") or {}
         lines = [
             "⛺ *EMERGENCY ORDER: SHELTER & RELIEF CAMP MANAGEMENT* ⛺",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             f"📍 *Incident ID:* #{disaster_id} | *Hazard:* {disaster_type}",
             f"🗺️ *Target Location:* {location}",
             f"👥 *Citizens Requiring Immediate Shelter:* {affected}",
             f"⚠️ *Incident Severity Level:* {severity}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE TO SCENE):*",
             f"{maps_link}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🏠 *RESOURCE ALLOCATION QUOTA (OFFICIAL DIRECTIVE):*",
-            f"• *Designated Relief Camp Facilities:* {_get_val(shelter, 'TemporaryShelters', 'emergency_shelters', default=0)} facilities",
-            f"• *High-Durability Family Relief Tents:* {_format_metric(_get_val(shelter, 'FamilyTents', 'family_tents', default=0))} tents",
-            f"• *Bedding and Blanket Ensembles:* {_format_metric(_get_val(shelter, 'Blankets', 'bedding_kits', default=0))} sets",
-            f"• *Waterproof Ground Mattresses:* {_format_metric(_get_val(shelter, 'Mattresses', 'mattresses', default=0))} units",
-            f"• *Camp First Aid Stations:* {_get_val(shelter, 'FirstAidStations', 'first_aid_stations', default=0)} medical booths",
-            f"• *Dedicated Women Safety Enclosures:* {_get_val(shelter, 'WomenSafetyZones', 'women_safety_zones', default=0)} zones",
-            f"• *Child Care and Nursing Hubs:* {_get_val(shelter, 'ChildCareCenters', 'child_care_centers', default=0)} hubs",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            f"- *Designated Relief Camp Facilities:* {_get_val(shelter, 'TemporaryShelters', 'emergency_shelters', default=0)} facilities",
+            f"- *High-Durability Family Relief Tents:* {_format_metric(_get_val(shelter, 'FamilyTents', 'family_tents', default=0))} tents",
+            f"- *Bedding and Blanket Ensembles:* {_format_metric(_get_val(shelter, 'Blankets', 'bedding_kits', default=0))} sets",
+            f"- *Waterproof Ground Mattresses:* {_format_metric(_get_val(shelter, 'Mattresses', 'mattresses', default=0))} units",
+            f"- *Camp First Aid Stations:* {_get_val(shelter, 'FirstAidStations', 'first_aid_stations', default=0)} medical booths",
+            f"- *Dedicated Women Safety Enclosures:* {_get_val(shelter, 'WomenSafetyZones', 'women_safety_zones', default=0)} zones",
+            f"- *Child Care and Nursing Hubs:* {_get_val(shelter, 'ChildCareCenters', 'child_care_centers', default=0)} hubs",
+            DIVIDER,
             "⚡ *FIELD EXECUTION PROTOCOL:*",
             "1. Unlock public stadiums, civic halls, and designated schools on high ground.",
             "2. Erect waterproof tent cities with solar illumination and bio-toilets.",
             "3. Maintain digital intake registers for missing persons reconciliation.",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            f"📎 *OFFICIAL ACTION PLAN:* [Direct Attached Document: {pdf_filename}]",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
+            "📄 *OFFICIAL SHELTER DEPARTMENT ACTION ORDER (DIRECT PDF):*",
+            f"{pdf_url}",
+            DIVIDER,
             "✅ *Authorized by National Emergency Operations Center*",
-            "Shelter Operations Division • Immediate Deployment"
+            "Shelter Operations Division | Immediate Deployment"
         ]
 
     # 5. MEDICAL DEPARTMENT (Phone: +91 7397071819)
@@ -294,34 +301,35 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
         medical = resources.get("Medical") or {}
         lines = [
             "🏥 *EMERGENCY ORDER: MEDICAL & HEALTH SERVICES* 🏥",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             f"📍 *Incident ID:* #{disaster_id} | *Hazard:* {disaster_type}",
             f"🗺️ *Target Location:* {location}",
             f"👥 *Potential Casualties and Affected Citizens:* {affected}",
             f"⚠️ *Incident Severity Level:* {severity}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE TO SCENE):*",
             f"{maps_link}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🩺 *RESOURCE ALLOCATION QUOTA (OFFICIAL DIRECTIVE):*",
-            f"• *Emergency Physicians and Surgeons:* {_get_val(medical, 'Doctors', 'doctors', default=0)} on active duty",
-            f"• *Trauma Paramedics and Critical Care Nurses:* {_get_val(medical, 'Paramedics', 'paramedics', default=0)} personnel",
-            f"• *Advanced and Basic Life Support Ambulances:* {_get_val(medical, 'Ambulances', 'ambulances', default=0)} vehicles",
-            f"• *Comprehensive Trauma Treatment Kits:* {_format_metric(_get_val(medical, 'FirstAidKits', 'emergency_medical_kits', default=0))} kits",
-            f"• *Mobile Medical Clinic Units:* {_get_val(medical, 'MobileClinics', 'mobile_medical_teams', default=0)} vans",
-            f"• *Dedicated Intensive Care ICU Beds:* {_get_val(medical, 'TemporaryICUBeds', 'icu_beds', default=0)} beds",
-            f"• *Polyvalent Anti-Venom and Tetanus Vials:* {_get_val(medical, 'AntiVenomUnits', 'anti_venom', default=0)} doses",
-            f"• *Field Triage and Casualty Stabilization Hubs:* {_get_val(medical, 'TraumaCenters', 'triage_centers', default=0)} hubs",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            f"- *Emergency Physicians and Surgeons:* {_get_val(medical, 'Doctors', 'doctors', default=0)} on active duty",
+            f"- *Trauma Paramedics and Critical Care Nurses:* {_get_val(medical, 'Paramedics', 'paramedics', default=0)} personnel",
+            f"- *Advanced and Basic Life Support Ambulances:* {_get_val(medical, 'Ambulances', 'ambulances', default=0)} vehicles",
+            f"- *Comprehensive Trauma Treatment Kits:* {_format_metric(_get_val(medical, 'FirstAidKits', 'emergency_medical_kits', default=0))} kits",
+            f"- *Mobile Medical Clinic Units:* {_get_val(medical, 'MobileClinics', 'mobile_medical_teams', default=0)} vans",
+            f"- *Dedicated Intensive Care ICU Beds:* {_get_val(medical, 'TemporaryICUBeds', 'icu_beds', default=0)} beds",
+            f"- *Polyvalent Anti-Venom and Tetanus Vials:* {_get_val(medical, 'AntiVenomUnits', 'anti_venom', default=0)} doses",
+            f"- *Field Triage and Casualty Stabilization Hubs:* {_get_val(medical, 'TraumaCenters', 'triage_centers', default=0)} hubs",
+            DIVIDER,
             "⚡ *FIELD EXECUTION PROTOCOL:*",
             "1. Establish Red-Yellow-Green triage zones immediately outside danger sector.",
             "2. Alert district trauma hospitals to activate Emergency Code Red protocols.",
             "3. Deploy paramedic ambulances to evacuation extraction pickup points.",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            f"📎 *OFFICIAL ACTION PLAN:* [Direct Attached Document: {pdf_filename}]",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
+            "📄 *OFFICIAL MEDICAL DEPARTMENT ACTION ORDER (DIRECT PDF):*",
+            f"{pdf_url}",
+            DIVIDER,
             "✅ *Authorized by National Emergency Operations Center*",
-            "Health & Family Welfare Emergency Command • Immediate Deployment"
+            "Health & Family Welfare Emergency Command | Immediate Deployment"
         ]
 
     # 6. RESCUE DEPARTMENT (Phone: +91 9500330279)
@@ -329,33 +337,34 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
         rescue = resources.get("Rescue") or {}
         lines = [
             "🛟 *EMERGENCY ORDER: SEARCH & RESCUE AUTHORITY (NDRF/SDRF)* 🛟",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             f"📍 *Incident ID:* #{disaster_id} | *Hazard:* {disaster_type}",
             f"🗺️ *Target Location:* {location}",
             f"👥 *Citizens in Hazard Impact Zone:* {affected}",
             f"⚠️ *Incident Severity Level:* {severity}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE TO SCENE):*",
             f"{maps_link}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🚁 *RESOURCE ALLOCATION QUOTA (OFFICIAL DIRECTIVE):*",
-            f"• *Specialized NDRF and SDRF Rescue Teams:* {_get_val(rescue, 'RescueTeams', 'NDRFTeams', 'rescue_teams', default=0)} teams",
-            f"• *Deployed Search and Rescue Commandos:* {_format_metric(_get_val(rescue, 'RescuePersonnel', 'rescue_personnel', default=0))} personnel",
-            f"• *Motorized Inflatable Rescue Boats (IRBs):* {_get_val(rescue, 'RescueBoats', 'rescue_boats', default=0)} craft",
-            f"• *Air Force / Coast Guard Rescue Helicopters:* {_get_val(rescue, 'Helicopters', 'RescueHelicopters', 'helicopters', default=0)} aircraft",
-            f"• *Thermal Vision Aerial Reconnaissance Drones:* {_get_val(rescue, 'Drones', 'drones', default=0)} drones",
-            f"• *Certified Marine Life Jackets:* {_format_metric(_get_val(rescue, 'LifeJackets', 'life_jackets', default=0))} jackets",
-            f"• *Deep Water Diver and Trench Extraction Squads:* {_get_val(rescue, 'DiverTeams', 'diver_teams', default=0)} squads",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            f"- *Specialized NDRF and SDRF Rescue Teams:* {_get_val(rescue, 'RescueTeams', 'NDRFTeams', 'rescue_teams', default=0)} teams",
+            f"- *Deployed Search and Rescue Commandos:* {_format_metric(_get_val(rescue, 'RescuePersonnel', 'rescue_personnel', default=0))} personnel",
+            f"- *Motorized Inflatable Rescue Boats (IRBs):* {_get_val(rescue, 'RescueBoats', 'rescue_boats', default=0)} craft",
+            f"- *Air Force / Coast Guard Rescue Helicopters:* {_get_val(rescue, 'Helicopters', 'RescueHelicopters', 'helicopters', default=0)} aircraft",
+            f"- *Thermal Vision Aerial Reconnaissance Drones:* {_get_val(rescue, 'Drones', 'drones', default=0)} drones",
+            f"- *Certified Marine Life Jackets:* {_format_metric(_get_val(rescue, 'LifeJackets', 'life_jackets', default=0))} jackets",
+            f"- *Deep Water Diver and Trench Extraction Squads:* {_get_val(rescue, 'DiverTeams', 'diver_teams', default=0)} squads",
+            DIVIDER,
             "⚡ *FIELD EXECUTION PROTOCOL:*",
             "1. Launch aerial reconnaissance drones to pinpoint trapped civilian clusters.",
             "2. Deploy inflatable boats and amphibian vehicles to submerged or blocked roads.",
             "3. Winch critical stranded individuals directly to medical helipads.",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            f"📎 *OFFICIAL ACTION PLAN:* [Direct Attached Document: {pdf_filename}]",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
+            "📄 *OFFICIAL RESCUE DEPARTMENT ACTION ORDER (DIRECT PDF):*",
+            f"{pdf_url}",
+            DIVIDER,
             "✅ *Authorized by National Emergency Operations Center*",
-            "Search & Rescue Headquarters (NDRF) • Immediate Deployment"
+            "Search & Rescue Headquarters (NDRF) | Immediate Deployment"
         ]
 
     # 7. POLICE DEPARTMENT (Phone: +91 9500330279)
@@ -363,32 +372,33 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
         police = resources.get("Police") or {}
         lines = [
             "🚓 *EMERGENCY ORDER: POLICE & SECURITY CORPS* 🚓",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             f"📍 *Incident ID:* #{disaster_id} | *Hazard:* {disaster_type}",
             f"🗺️ *Target Location:* {location}",
             f"👥 *Population in Evacuation Corridor:* {affected}",
             f"⚠️ *Incident Severity Level:* {severity}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE TO SCENE):*",
             f"{maps_link}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🛡️ *RESOURCE ALLOCATION QUOTA (OFFICIAL DIRECTIVE):*",
-            f"• *Police Officers Deployed on Law and Order:* {_format_metric(_get_val(police, 'PolicePersonnel', 'PoliceOfficers', 'police_personnel', default=0))} personnel",
-            f"• *Mobile Rapid Response Patrol Cruisers:* {_get_val(police, 'PatrolUnits', 'patrol_units', default=0)} vehicles",
-            f"• *Perimeter Barricades and Checkpoints:* {_get_val(police, 'Checkpoints', 'Barricades', 'checkpoints', default=0)} checkpoints",
-            f"• *Crowd Management and Anti-Stampede Units:* {_get_val(police, 'CrowdControlTeams', 'traffic_control_teams', default=0)} squads",
-            f"• *Dedicated Traffic Regulation Units:* {_get_val(police, 'TrafficControlUnits', 'TrafficPolice', 'traffic_units', default=0)} units",
-            f"• *Civilian Evacuation Convoy Escort Squads:* {_get_val(police, 'EvacuationEscortTeams', 'escort_teams', default=0)} squads",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            f"- *Police Officers Deployed on Law and Order:* {_format_metric(_get_val(police, 'PolicePersonnel', 'PoliceOfficers', 'police_personnel', default=0))} personnel",
+            f"- *Mobile Rapid Response Patrol Cruisers:* {_get_val(police, 'PatrolUnits', 'patrol_units', default=0)} vehicles",
+            f"- *Perimeter Barricades and Checkpoints:* {_get_val(police, 'Checkpoints', 'Barricades', 'checkpoints', default=0)} checkpoints",
+            f"- *Crowd Management and Anti-Stampede Units:* {_get_val(police, 'CrowdControlTeams', 'traffic_control_teams', default=0)} squads",
+            f"- *Dedicated Traffic Regulation Units:* {_get_val(police, 'TrafficControlUnits', 'TrafficPolice', 'traffic_units', default=0)} units",
+            f"- *Civilian Evacuation Convoy Escort Squads:* {_get_val(police, 'EvacuationEscortTeams', 'escort_teams', default=0)} squads",
+            DIVIDER,
             "⚡ *FIELD EXECUTION PROTOCOL:*",
             "1. Cordon off the primary hazard perimeter to restrict unauthorized traffic.",
             "2. Secure priority green corridors for ambulances and relief trucks.",
             "3. Enforce 24-hour patrols across evacuated neighborhoods against looting.",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            f"📎 *OFFICIAL ACTION PLAN:* [Direct Attached Document: {pdf_filename}]",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
+            "📄 *OFFICIAL POLICE DEPARTMENT ACTION ORDER (DIRECT PDF):*",
+            f"{pdf_url}",
+            DIVIDER,
             "✅ *Authorized by National Emergency Operations Center*",
-            "Police Headquarters Emergency Operations Cell • Immediate Deployment"
+            "Police Headquarters Emergency Operations Cell | Immediate Deployment"
         ]
 
     # 8. TRANSPORT DEPARTMENT (Phone: +91 9500330279)
@@ -396,46 +406,48 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
         trans = resources.get("Transport") or {}
         lines = [
             "🚚 *EMERGENCY ORDER: LOGISTICS & TRANSPORT FLEET* 🚚",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             f"📍 *Incident ID:* #{disaster_id} | *Hazard:* {disaster_type}",
             f"🗺️ *Target Location:* {location}",
             f"👥 *Citizens Scheduled for Transport:* {affected}",
             f"⚠️ *Incident Severity Level:* {severity}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE TO SCENE):*",
             f"{maps_link}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
             "🚛 *RESOURCE ALLOCATION QUOTA (OFFICIAL DIRECTIVE):*",
-            f"• *Heavy Evacuation Passenger Buses:* {_get_val(trans, 'EvacuationBuses', 'evacuation_buses', default=0)} buses",
-            f"• *Relief Cargo and Supply Heavy Trucks:* {_get_val(trans, 'SupplyTrucks', 'ReliefTrucks', 'relief_supply_trucks', default=0)} trucks",
-            f"• *4x4 Off-Road All-Terrain Utility Vehicles:* {_get_val(trans, 'OffRoadVehicles', 'offroad_vehicles', default=0)} vehicles",
-            f"• *Emergency Mobile Fuel Supply Tankers:* {_get_val(trans, 'FuelTankers', 'fuel_tankers', default=0)} tankers",
-            f"• *Designated Logistics Staging Hubs:* {_get_val(trans, 'LogisticsHubs', 'logistics_hubs', default=0)} hubs",
-            f"• *Clearance Transit Priority Green Corridors:* {_get_val(trans, 'GreenCorridors', 'priority_corridors', default=0)} corridors",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            f"- *Heavy Evacuation Passenger Buses:* {_get_val(trans, 'EvacuationBuses', 'evacuation_buses', default=0)} buses",
+            f"- *Relief Cargo and Supply Heavy Trucks:* {_get_val(trans, 'SupplyTrucks', 'ReliefTrucks', 'relief_supply_trucks', default=0)} trucks",
+            f"- *4x4 Off-Road All-Terrain Utility Vehicles:* {_get_val(trans, 'OffRoadVehicles', 'offroad_vehicles', default=0)} vehicles",
+            f"- *Emergency Mobile Fuel Supply Tankers:* {_get_val(trans, 'FuelTankers', 'fuel_tankers', default=0)} tankers",
+            f"- *Designated Logistics Staging Hubs:* {_get_val(trans, 'LogisticsHubs', 'logistics_hubs', default=0)} hubs",
+            f"- *Clearance Transit Priority Green Corridors:* {_get_val(trans, 'GreenCorridors', 'priority_corridors', default=0)} corridors",
+            DIVIDER,
             "⚡ *FIELD EXECUTION PROTOCOL:*",
             "1. Assemble evacuation bus fleet at designated civilian pickup points.",
             "2. Ferry supplies from regional central warehouses directly to relief camps.",
             "3. Station fuel tankers along transit corridors to prevent fleet stalls.",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            f"📎 *OFFICIAL ACTION PLAN:* [Direct Attached Document: {pdf_filename}]",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━",
+            DIVIDER,
+            "📄 *OFFICIAL TRANSPORT DEPARTMENT ACTION ORDER (DIRECT PDF):*",
+            f"{pdf_url}",
+            DIVIDER,
             "✅ *Authorized by National Emergency Operations Center*",
-            "Department of Transport & Logistics Fleet Command • Immediate Deployment"
+            "Department of Transport & Logistics Fleet Command | Immediate Deployment"
         ]
 
     else:
         pdf_filename = f"Disaster_{disaster_id}_Action_Plan.pdf"
         lines = [
-            f"🚨 *DISASTER ALERT — INCIDENT #{disaster_id}* 🚨",
+            f"🚨 *DISASTER ALERT - INCIDENT #{disaster_id}* 🚨",
             f"Location: {location} | Hazard: {disaster_type} | Severity: {severity}",
             f"🧭 Live Turn-by-Turn GPS Navigation: {maps_link}",
-            f"📎 *OFFICIAL ACTION PLAN:* [Direct Attached Document: {pdf_filename}]"
+            f"📄 *OFFICIAL ACTION ORDER (DIRECT PDF):*\n{pdf_url}"
         ]
 
-    # Join message lines and enforce strict ZERO question marks guarantee
-    message_text = "\n".join(lines).replace("?", "")
-    encoded_text = urllib.parse.quote(message_text)
+    message_text = "\n".join(lines)
+    encoded_text = urllib.parse.quote(message_text, safe="")
+    wa_web_link = f"https://web.whatsapp.com/send?phone={phone}&text={encoded_text}"
+    wa_app_link = f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
     wa_link = f"https://wa.me/{phone}?text={encoded_text}"
 
     return {
@@ -448,6 +460,8 @@ def build_department_message(disaster_data: dict, dept_id: str, base_url: str = 
         "icon": contact_info.get("icon", "🚨"),
         "message_text": message_text,
         "wa_link": wa_link,
+        "wa_web_link": wa_web_link,
+        "wa_app_link": wa_app_link,
         "pdf_url": pdf_url,
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
@@ -497,8 +511,10 @@ def send_whatsapp_alert(
     - Direct WhatsApp Dispatch: Provides pre-filled wa.me text alert + verified local PDF attachment.
     """
     clean_num = _clean_phone(phone)
-    safe_text = text.replace("?", "")
-    encoded = urllib.parse.quote(safe_text)
+    safe_text = text
+    encoded = urllib.parse.quote(safe_text, safe="")
+    wa_web_url = f"https://web.whatsapp.com/send?phone={clean_num}&text={encoded}"
+    wa_mobile_url = f"https://api.whatsapp.com/send?phone={clean_num}&text={encoded}"
     wa_direct_url = f"https://wa.me/{clean_num}?text={encoded}"
     doc_name = pdf_filename or (os.path.basename(pdf_path) if pdf_path else "Disaster_Action_Plan.pdf")
 
@@ -621,7 +637,9 @@ def send_whatsapp_alert(
         "pdf_filename": doc_name,
         "pdf_path": pdf_path,
         "pdf_url": pdf_url,
-        "wa_direct_url": wa_direct_url
+        "wa_direct_url": wa_direct_url,
+        "wa_web_url": wa_web_url,
+        "wa_mobile_url": wa_mobile_url
     }
 
 

@@ -41,7 +41,7 @@ def _severity_text(ai_severity):
     return str(ai_severity).strip() or "UNKNOWN"
 
 
-def _get_prediction_value(prediction, key, default="—"):
+def _get_prediction_value(prediction, key, default="-"):
     if isinstance(prediction, dict):
         value = prediction.get(key)
         if value is not None and str(value).strip():
@@ -67,7 +67,7 @@ def generate_notification(disaster, ai_severity, prediction, resources):
     priority = _get_prediction_value(
         prediction,
         "Priority",
-        getattr(disaster, "severity", "—"),
+        getattr(disaster, "severity", "-"),
     )
 
     evacuation = _get_prediction_value(
