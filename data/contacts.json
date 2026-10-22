@@ -1,0 +1,66 @@
+{
+  "central_command": {
+    "id": "central_command",
+    "name": "Central Command (Master EOC)",
+    "department": "National Emergency Operations Center",
+    "phone": "917397071819",
+    "role": "Master Incident Coordination & Oversight",
+    "icon": "\ud83c\udfe2"
+  },
+  "food": {
+    "id": "food",
+    "name": "Food & Civil Supplies Department",
+    "department": "Food",
+    "phone": "918015808283",
+    "role": "Ration, Meal Packets & Community Kitchens",
+    "icon": "\ud83c\udf72"
+  },
+  "water": {
+    "id": "water",
+    "name": "Water Supply & Sanitation Board",
+    "department": "Water",
+    "phone": "918015808283",
+    "role": "Drinking Water, Tankers & Purification",
+    "icon": "\ud83d\udca7"
+  },
+  "shelter": {
+    "id": "shelter",
+    "name": "Shelter & Relief Camp Management",
+    "department": "Shelter",
+    "phone": "918015808283",
+    "role": "Emergency Tents, Relief Camps & Bedding",
+    "icon": "\u26fa"
+  },
+  "medical": {
+    "id": "medical",
+    "name": "Emergency Medical & Health Services",
+    "department": "Medical",
+    "phone": "917397071819",
+    "role": "Ambulances, Triage, Field Hospitals & Meds",
+    "icon": "\ud83c\udfe5"
+  },
+  "rescue": {
+    "id": "rescue",
+    "name": "Search & Rescue Authority (NDRF/SDRF)",
+    "department": "Rescue",
+    "phone": "919500330279",
+    "role": "Evacuation Teams, Boats, Choppers & Gear",
+    "icon": "\ud83d\udedf"
+  },
+  "police": {
+    "id": "police",
+    "name": "Police & Perimeter Security Control",
+    "department": "Police",
+    "phone": "919500330279",
+    "role": "Law & Order, Checkpoints & Green Corridors",
+    "icon": "\ud83d\ude93"
+  },
+  "transport": {
+    "id": "transport",
+    "name": "Logistics & Transport Department",
+    "department": "Transport",
+    "phone": "919500330279",
+    "role": "Evacuation Buses, Supply Trucks & Fleet",
+    "icon": "\ud83d\ude9a"
+  }
+}

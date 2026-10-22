@@ -79,8 +79,29 @@ DEFAULT_CONTACTS = {
     }
 }
 
-# In-memory contacts store (initialized with defaults, modifiable at runtime)
-CONTACTS_STORE = {k: dict(v) for k, v in DEFAULT_CONTACTS.items()}
+import json
+
+CONTACTS_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "data",
+    "contacts.json"
+)
+
+def _load_contacts_store():
+    store = {k: dict(v) for k, v in DEFAULT_CONTACTS.items()}
+    if os.path.exists(CONTACTS_FILE):
+        try:
+            with open(CONTACTS_FILE, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                for k, v in saved.items():
+                    if k in store and isinstance(v, dict):
+                        store[k].update(v)
+        except Exception as e:
+            print("Notice: Error reading contacts.json:", e)
+    return store
+
+# Active contacts store (loaded from disk if available, initialized with defaults)
+CONTACTS_STORE = _load_contacts_store()
 
 
 def get_all_contacts():
@@ -89,9 +110,21 @@ def get_all_contacts():
 
 
 def update_contact_phone(contact_id: str, new_phone: str):
-    """Update phone number for a given department contact."""
+    """Update phone number for a given department contact and persist to disk."""
     clean_phone = "".join(filter(str.isdigit, str(new_phone)))
+    if clean_phone.startswith("0"):
+        clean_phone = clean_phone[1:]
+    if len(clean_phone) == 10:
+        clean_phone = "91" + clean_phone
+
     if contact_id in CONTACTS_STORE:
         CONTACTS_STORE[contact_id]["phone"] = clean_phone
+        try:
+            os.makedirs(os.path.dirname(CONTACTS_FILE), exist_ok=True)
+            with open(CONTACTS_FILE, "w", encoding="utf-8") as f:
+                json.dump(CONTACTS_STORE, f, indent=2)
+        except Exception as e:
+            print("Notice: Error persisting contacts.json:", e)
         return CONTACTS_STORE[contact_id]
     return None
+

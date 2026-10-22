@@ -504,7 +504,8 @@ def download_master_pdf(disaster_id: int):
         return FileResponse(
             pdf_path,
             media_type="application/pdf",
-            filename=f"Disaster_{disaster_id}_Master_IAP.pdf"
+            filename=f"Disaster_{disaster_id}_Master_IAP.pdf",
+            content_disposition_type="inline"
         )
     except Exception as e:
         print("❌ ERROR generating master PDF:", e)
@@ -539,7 +540,8 @@ def download_department_pdf(disaster_id: int, department: str):
         return FileResponse(
             pdf_path,
             media_type="application/pdf",
-            filename=f"Disaster_{disaster_id}_{clean_dept.capitalize()}_Order.pdf"
+            filename=f"Disaster_{disaster_id}_{clean_dept.capitalize()}_Order.pdf",
+            content_disposition_type="inline"
         )
     except Exception as e:
         print(f"❌ ERROR generating {department} PDF:", e)

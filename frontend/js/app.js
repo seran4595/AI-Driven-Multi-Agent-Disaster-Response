@@ -526,6 +526,21 @@ function formatCompact(num) {
 // DOM READY
 // =====================================================
 
+window.systemContacts = {};
+
+async function fetchContactsOnStartup() {
+    try {
+        const res = await fetch("/api/contacts");
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.contacts) {
+                window.systemContacts = data.contacts;
+                console.log("📁 Loaded system contacts directory:", window.systemContacts);
+            }
+        }
+    } catch (_) {}
+}
+
 function fetchServerLanIp() {
     fetch("/api-status")
         .then(r => r.json())
@@ -539,6 +554,7 @@ function fetchServerLanIp() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    fetchContactsOnStartup();
     fetchServerLanIp();
     initializeMap();
     setupNavigation();
@@ -3813,17 +3829,38 @@ function showAIResult(data, isSavedPlan = false) {
 
 window.currentAgencyMessages = {};
 
+function getContactPhone(contactId, fallback = "") {
+    const c = window.systemContacts?.[contactId];
+    if (c && c.phone) {
+        return String(c.phone).replace(/\D/g, "");
+    }
+    return fallback;
+}
+
+function formatDisplayPhone(rawPhone) {
+    const digits = String(rawPhone || "").replace(/\D/g, "");
+    if (digits.startsWith("91") && digits.length === 12) {
+        return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+    }
+    if (digits.length === 10) {
+        return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    }
+    return digits ? `+${digits}` : "Not Set";
+}
+
 function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, city, state, country, resources, prediction, alertMessage, latitude, longitude, isSavedPlan = false) {
     const locStr = `${city || ''}, ${state || ''}`.replace(/^,\s*|,\s*$/g, '') || "Emergency Coordinates";
     const baseOrigin = window.systemLanBaseUrl || (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' ? 'http://10.140.130.10:8000' : window.location.origin);
     window.currentPreviewDisasterId = id;
 
+    const centralRawPhone = getContactPhone("central_command", "917397071819");
+    const centralDisplayPhone = formatDisplayPhone(centralRawPhone);
+
     const agencies = [
         {
             id: "food",
             name: "Food & Civil Supplies",
-            phone: "918015808283",
-            displayPhone: "+91 80158 08283",
+            defaultPhone: "918015808283",
             icon: "🍲",
             color: "#ea580c",
             summary: `Packets: ${formatNumber(resources.Food?.FoodPackets || resources.Food?.required_food_packets || 0)} | Meals: ${resources.Food?.MealsPerDay || 3}/day | ${resources.Food?.MealType || 'Prepared Meals'}`,
@@ -3832,8 +3869,7 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         {
             id: "water",
             name: "Water Supply & Sanitation",
-            phone: "918015808283",
-            displayPhone: "+91 80158 08283",
+            defaultPhone: "918015808283",
             icon: "💧",
             color: "#0284c7",
             summary: `Water: ${formatNumber(resources.Water?.TotalWaterRequired_Liters || resources.Water?.water_liters_per_day || 0)} L/day | Tankers: ${resources.Water?.WaterTankers || 0} units`,
@@ -3842,8 +3878,7 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         {
             id: "shelter",
             name: "Shelter & Relief Camps",
-            phone: "918015808283",
-            displayPhone: "+91 80158 08283",
+            defaultPhone: "918015808283",
             icon: "⛺",
             color: "#0d9488",
             summary: `Shelters: ${resources.Shelter?.TemporaryShelters || 0} | Tents: ${formatNumber(resources.Shelter?.FamilyTents || 0)} | Bedding: ${formatNumber(resources.Shelter?.Blankets || 0)}`,
@@ -3852,8 +3887,7 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         {
             id: "medical",
             name: "Medical & Health Emergency",
-            phone: "917397071819",
-            displayPhone: "+91 73970 71819",
+            defaultPhone: "917397071819",
             icon: "🏥",
             color: "#e11d48",
             summary: `Ambulances: ${resources.Medical?.Ambulances || 0} | Doctors: ${resources.Medical?.Doctors || 0} | Paramedics: ${resources.Medical?.Paramedics || 0}`,
@@ -3862,8 +3896,7 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         {
             id: "rescue",
             name: "Search & Rescue (NDRF/SDRF)",
-            phone: "919500330279",
-            displayPhone: "+91 95003 30279",
+            defaultPhone: "919500330279",
             icon: "🛟",
             color: "#b45309",
             summary: `Teams: ${resources.Rescue?.RescueTeams || 0} | Boats: ${resources.Rescue?.RescueBoats || 0} | Choppers: ${resources.Rescue?.Helicopters || 0}`,
@@ -3872,8 +3905,7 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         {
             id: "police",
             name: "Police & Security Corps",
-            phone: "919500330279",
-            displayPhone: "+91 95003 30279",
+            defaultPhone: "919500330279",
             icon: "🚓",
             color: "#4338ca",
             summary: `Officers: ${formatNumber(resources.Police?.PolicePersonnel || 0)} | Patrols: ${resources.Police?.PatrolUnits || 0} | Checkpoints: ${resources.Police?.Checkpoints || 0}`,
@@ -3882,14 +3914,20 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         {
             id: "transport",
             name: "Logistics & Transport Fleet",
-            phone: "919500330279",
-            displayPhone: "+91 95003 30279",
+            defaultPhone: "919500330279",
             icon: "🚚",
             color: "#475569",
             summary: `Buses: ${resources.Transport?.EvacuationBuses || 0} | Supply Trucks: ${resources.Transport?.SupplyTrucks || 0} | 4x4 Offroad: ${resources.Transport?.OffRoadVehicles || 0}`,
             directive: "Position evacuation bus convoys and dispatch heavy cargo supply fleet."
         }
-    ];
+    ].map(a => {
+        const raw = getContactPhone(a.id, a.defaultPhone);
+        return {
+            ...a,
+            phone: raw,
+            displayPhone: formatDisplayPhone(raw)
+        };
+    });
 
     const turnByTurnNav = (latitude && longitude)
         ? `https://www.google.com/maps/dir//${latitude.toFixed(6)},${longitude.toFixed(6)}`
@@ -3909,21 +3947,23 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
         "🧭 *LIVE TURN-BY-TURN GPS NAVIGATION (PRESS TO NAVIGATE):*",
         `${turnByTurnNav}`,
         divider,
-        "📄 *OFFICIAL MASTER INCIDENT ACTION PLAN (DIRECT PDF):*",
-        `${masterPdfUrl}`,
+        "📄 *SEPARATE OFFICIAL ACTION PLAN (PRINT / PDF ORDER):*",
+        `📎 *Separate Document File:* [${masterPdfName}]`,
+        `🖨️ *Direct View, Print & Download File:*\n${masterPdfUrl}`,
+        "*(Tap to open in device PDF Viewer / Print directly)*",
         divider,
         "✅ *Authorized by AI Multi-Agent Coordinator*",
         "National Emergency Operations Center | Operational 24x7"
     ].join("\n");
-    const masterWaWeb = `https://web.whatsapp.com/send?phone=917397071819&text=${encodeURIComponent(masterMsg)}`;
-    const masterWaApp = `https://api.whatsapp.com/send?phone=917397071819&text=${encodeURIComponent(masterMsg)}`;
+    const masterWaWeb = `https://web.whatsapp.com/send?phone=${centralRawPhone}&text=${encodeURIComponent(masterMsg)}`;
+    const masterWaApp = `https://api.whatsapp.com/send?phone=${centralRawPhone}&text=${encodeURIComponent(masterMsg)}`;
 
     window.currentAgencyMessages["central_command"] = {
         disasterId: id,
         channelId: "central_command",
         title: "Central Command / Master EOC",
-        phone: "+91 73970 71819",
-        rawPhone: "917397071819",
+        phone: centralDisplayPhone,
+        rawPhone: centralRawPhone,
         text: masterMsg,
         waUrl: masterWaWeb,
         waAppUrl: masterWaApp,
@@ -3950,8 +3990,10 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
             divider,
             `⚡ *Directive:* ${agency.directive}`,
             divider,
-            `📄 *OFFICIAL ${agency.name.toUpperCase()} ACTION ORDER (DIRECT PDF):*`,
-            `${deptPdfUrl}`,
+            `📄 *SEPARATE OFFICIAL ${agency.name.toUpperCase()} ORDER (PRINT / PDF FILE):*`,
+            `📎 *Separate Document File:* [${deptPdfName}]`,
+            `🖨️ *Direct View, Print & Download File:*\n${deptPdfUrl}`,
+            "*(Tap to open in device PDF Viewer / Print directly)*",
             divider,
             "✅ *Authorized by National Emergency Operations Center*",
             "Official Emergency Directive | AI Multi-Agent Coordinator"
@@ -3985,7 +4027,7 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
                         <div>
                             <strong style="color: #34d399; font-size: 0.95rem; display: block; letter-spacing: 0.3px;">AUTOMATED MULTI-AGENCY NOTIFICATION DISPATCHED</strong>
                             <div style="color: #94a3b8; font-size: 0.82rem; margin-top: 2px;">
-                                Unique departmental resource quotas, live GPS turn-by-turn navigation &amp; direct PDF action plans were auto-sent to all 8 specialized WhatsApp numbers upon incident reporting.
+                                Unique departmental resource quotas, live GPS turn-by-turn navigation &amp; direct printable PDF action plans were auto-sent to all 8 specialized WhatsApp numbers upon incident reporting.
                             </div>
                         </div>
                     </div>
@@ -4025,7 +4067,7 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
                         <div class="wa-channel-icon">🏢</div>
                         <div class="wa-channel-title">
                             <h5>Central Command &amp; Emergency Operations Center (EOC)</h5>
-                            <span class="wa-phone-tag">📱 +91 73970 71819</span>
+                            <span class="wa-phone-tag" id="wa-phone-display-central_command">📱 ${centralDisplayPhone}</span>
                             <span class="wa-role-tag">• Master Incident Oversight &amp; Multi-Agency Orchestration</span>
                         </div>
                     </div>
@@ -4036,8 +4078,11 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
                         <a href="${turnByTurnNav}" target="_blank" class="wa-btn wa-btn-outline" style="border-color: #38bdf8; color: #38bdf8;" title="Initiate Turn-by-Turn Navigation directly in Google Maps">
                             🧭 Navigate to Scene
                         </a>
+                        <button type="button" class="wa-btn wa-btn-outline" style="border-color: #8b5cf6; color: #c084fc;" onclick="printDisasterPDF(${id})" title="Direct View or Print Master Action Plan PDF">
+                            🖨️ Print Master IAP
+                        </button>
                         <button type="button" class="wa-btn wa-btn-pdf" onclick="downloadDisasterPDF(${id})" title="Download official Master Incident Action Plan PDF">
-                            📄 Direct Master IAP PDF
+                            📄 Download PDF
                         </button>
                         <button type="button" class="wa-btn wa-btn-outline" onclick="previewDeptWhatsApp('central_command')">
                             👁️ Preview Message
@@ -4060,7 +4105,7 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
                                 </span>
                                 <div class="wa-agency-titles">
                                     <h6>${escapeHtml(agency.name)}</h6>
-                                    <span class="wa-agency-phone">📱 ${agency.displayPhone}</span>
+                                    <span class="wa-agency-phone" id="wa-phone-display-${agency.id}">📱 ${agency.displayPhone}</span>
                                 </div>
                             </div>
 
@@ -4075,8 +4120,11 @@ function renderWhatsAppMultiAgencySection(data, id, disasterType, aiSeverity, ci
                                 <a href="${turnByTurnNav}" target="_blank" class="wa-btn wa-btn-outline wa-btn-sm" style="border-color: #38bdf8; color: #38bdf8;" title="Turn-by-turn Navigation in Google Maps">
                                     🧭 Navigate
                                 </a>
+                                <button type="button" class="wa-btn wa-btn-outline wa-btn-sm" style="border-color: #8b5cf6; color: #c084fc;" onclick="printDisasterPDF(${id}, '${agency.id}')" title="Direct View or Print ${agency.name} Action Order PDF">
+                                    🖨️ Print / View
+                                </button>
                                 <button type="button" class="wa-btn wa-btn-pdf wa-btn-sm" onclick="downloadDisasterPDF(${id}, '${agency.id}')" title="Download ${agency.name} Action Order PDF">
-                                    📄 Direct PDF
+                                    📄 Download PDF
                                 </button>
                                 <button type="button" class="wa-btn wa-btn-outline wa-btn-sm" onclick="previewDeptWhatsApp('${agency.id}')" title="Preview formatted message text">
                                     👁️ Preview
@@ -4104,6 +4152,7 @@ function previewDeptWhatsApp(channelId) {
     const openBtn = document.getElementById("waPreviewOpenBtn");
     const openAppBtn = document.getElementById("waPreviewOpenAppBtn");
     const pdfBtn = document.getElementById("waPreviewPdfBtn");
+    const printBtn = document.getElementById("waPreviewPrintBtn");
     const copyBtn = document.getElementById("waPreviewCopyBtn");
     const closeBtnTop = document.getElementById("closeWaPreviewBtnTop");
     const closeBtn = document.getElementById("closeWaPreviewBtn");
@@ -4139,6 +4188,15 @@ function previewDeptWhatsApp(channelId) {
             pdfBtn.onclick = () => window.open(item.pdfUrl, "_blank");
         } else {
             pdfBtn.style.display = "none";
+        }
+    }
+
+    if (printBtn) {
+        if (item.pdfUrl) {
+            printBtn.style.display = "inline-flex";
+            printBtn.onclick = () => printDisasterPDF(item.disasterId || window.currentPreviewDisasterId, channelId === 'central_command' ? '' : channelId);
+        } else {
+            printBtn.style.display = "none";
         }
     }
 
@@ -4213,26 +4271,55 @@ async function sendWhatsAppWithDirectPDF(channelId, disasterId) {
     window.open(directWaUrl, "_blank");
 
     // 5. Open Guide Modal explaining how the direct PDF was saved and ready to drag
-    openDirectPdfGuideModal(pdfFilename, item.title, item.phone || cleanPhone);
+    openDirectPdfGuideModal(pdfFilename, item.title, item.phone || cleanPhone, pdfUrl);
 }
 
-function openDirectPdfGuideModal(pdfFilename, title, phone) {
+function openDirectPdfGuideModal(pdfFilename, title, phone, pdfUrl = "") {
     const modal = document.getElementById("directPdfGuideModal");
     if (!modal) return;
 
     const nameEl = document.getElementById("guidePdfFilename");
     const targetEl = document.getElementById("guideTargetDept");
+    const printBtn = document.getElementById("guidePrintPdfBtn");
     const closeBtnTop = document.getElementById("closeGuideModalBtnTop");
     const closeBtn = document.getElementById("closeGuideModalBtn");
 
     if (nameEl) nameEl.textContent = pdfFilename;
     if (targetEl) targetEl.textContent = `Target: ${title} (${phone})`;
 
+    if (printBtn) {
+        printBtn.onclick = () => {
+            if (pdfUrl) {
+                window.open(pdfUrl, "_blank");
+            }
+        };
+    }
+
     const closeHandler = () => modal.classList.remove("show");
     if (closeBtnTop) closeBtnTop.onclick = closeHandler;
     if (closeBtn) closeBtn.onclick = closeHandler;
 
     modal.classList.add("show");
+}
+
+function printDisasterPDF(disasterId, department = "") {
+    if (!disasterId) {
+        disasterId = currentActivePlan?.report?.id || currentActivePlan?.id || window.currentPreviewDisasterId;
+    }
+    if (!disasterId) {
+        alert("Disaster ID not available.");
+        return;
+    }
+    const cleanDept = (department || "").trim().toLowerCase();
+    const url = cleanDept 
+        ? `/api/disasters/${disasterId}/pdf/${cleanDept}`
+        : `/api/disasters/${disasterId}/pdf`;
+
+    showToastNotification(`🖨️ Opening ${cleanDept ? cleanDept.toUpperCase() : 'Master'} Action PDF for viewing & printing...`);
+    const win = window.open(url, "_blank");
+    if (win) {
+        win.focus();
+    }
 }
 
 function downloadDisasterPDF(disasterId, department = "") {
@@ -4276,18 +4363,19 @@ async function broadcastWhatsAppToAll(disasterId) {
 
         // Ask if user wants to open the WhatsApp chats
         setTimeout(() => {
+            const masterPhone = getContactPhone("central_command", "917397071819");
             if (confirm("✅ Broadcast prepared for all 8 departments!\n\nWould you like to open the Central Command Master WhatsApp chat now?")) {
                 const masterWaUrl = window.currentAgencyMessages?.["central_command"]?.waUrl || 
-                    `https://web.whatsapp.com/send?phone=917397071819`;
+                    `https://web.whatsapp.com/send?phone=${masterPhone}`;
                 window.open(masterWaUrl, "_blank");
             }
         }, 300);
 
     } catch (e) {
         console.error("Broadcast error:", e);
-        // Fallback: open Central Command WhatsApp directly
+        const masterPhone = getContactPhone("central_command", "917397071819");
         const masterWaUrl = window.currentAgencyMessages?.["central_command"]?.waUrl || 
-            `https://web.whatsapp.com/send?phone=917397071819`;
+            `https://web.whatsapp.com/send?phone=${masterPhone}`;
         window.open(masterWaUrl, "_blank");
     }
 }
@@ -4311,6 +4399,7 @@ async function openContactsDirectoryModal() {
         const res = await fetch("/api/contacts");
         const json = await res.json();
         const contacts = json.contacts || {};
+        window.systemContacts = contacts;
 
         let rows = "";
         for (const [key, c] of Object.entries(contacts)) {
@@ -4366,8 +4455,35 @@ async function saveContactPhone(contactId) {
             body: JSON.stringify({ phone })
         });
         const json = await res.json();
-        if (json.success) {
-            showToastNotification(`✅ Updated phone for ${json.contact.name}!`);
+        if (json.success && json.contact) {
+            // 1. Update in-memory window.systemContacts
+            if (!window.systemContacts) window.systemContacts = {};
+            window.systemContacts[contactId] = json.contact;
+
+            const updatedRawPhone = json.contact.phone || phone.replace(/\D/g, "");
+            const displayPhone = formatDisplayPhone(updatedRawPhone);
+
+            // 2. Update window.currentAgencyMessages[contactId]
+            if (window.currentAgencyMessages?.[contactId]) {
+                const item = window.currentAgencyMessages[contactId];
+                item.phone = displayPhone;
+                item.rawPhone = updatedRawPhone;
+                item.waUrl = `https://web.whatsapp.com/send?phone=${updatedRawPhone}&text=${encodeURIComponent(item.text)}`;
+                item.waAppUrl = `https://api.whatsapp.com/send?phone=${updatedRawPhone}&text=${encodeURIComponent(item.text)}`;
+            }
+
+            // 3. Update active DOM tag in result modal if open
+            const phoneDisplayEl = document.getElementById(`wa-phone-display-${contactId}`);
+            if (phoneDisplayEl) {
+                phoneDisplayEl.textContent = `📱 ${displayPhone}`;
+            }
+
+            // 4. Update preview modal if currently open for this contact
+            if (window.activePreviewChannel === contactId) {
+                previewDeptWhatsApp(contactId);
+            }
+
+            showToastNotification(`✅ Contact phone for ${json.contact.name} updated to ${displayPhone}! All notifications now target this number.`);
         } else {
             alert("Failed to update contact number.");
         }
@@ -4472,7 +4588,10 @@ function copyFallback(text) {
 }
 
 function printTacticalPlan() {
-    if (currentActivePlan) {
+    const id = currentActivePlan?.report?.id || currentActivePlan?.id || window.currentPreviewDisasterId;
+    if (id) {
+        printDisasterPDF(id);
+    } else if (currentActivePlan) {
         printSingleDisasterPlan(currentActivePlan);
     } else {
         window.print();
